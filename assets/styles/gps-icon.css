@@ -1,0 +1,10 @@
+
+.gps-icon-white {  background-color: white; }
+.gps-icon-black {  background-color: black; }
+.gps-icon { -webkit-mask-image: url('/assets/images/gps.png'); -webkit-mask-size: 12px; width: 12px; height: 12px; margin-top: 3px;}
+.gps-icon-center { top:3px; left:3px;}
+.gps-icon-small{-webkit-mask-size: 12px; width: 12px; height: 12px;}
+.gps-icon-18{-webkit-mask-size: 20px; width: 20px; height: 20px;}
+.gps-icon-medium{-webkit-mask-size: 24px; width: 24px; height: 24px;}
+.gps-icon-large{-webkit-mask-size: 32px; width: 32px; height: 32px;}
+.gps-icon-hughe{-webkit-mask-size: 48px; width: 48px; height: 48px;}

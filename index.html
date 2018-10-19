@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+
+        <meta charset="utf-8">
+        <meta content="width=device-width, initial-scale=0.9" name="viewport">
+
+        <!-- Add to home screen for Safari on iOS -->
+        <meta content="yes" name="apple-mobile-web-app-capable">
+        <meta content="black" name="apple-mobile-web-app-status-bar-style">
+        <meta content="SpotControl" name="apple-mobile-web-app-title">
+        <meta content="#2F3BA2" name="msapplication-TileColor">
+
+        <title>MAXTRACKER - Spot Control</title>
+
+        <!-- Favicon -->
+        <link type="image/x-icon" rel="shortcut icon" href="favicon.png">
+        <link type="image/x-icon" rel="icon" href="favicon.png">
+
+        <!-- Manifest -->
+        <link rel="manifest" href="/manifest.json">
+
+        <!-- CSS -->
+        <link type="text/css" rel="stylesheet" href="assets/bootstrap/bootstrap.min.css?v=11540001">
+        <link type="text/css" rel="stylesheet" href="assets/styles/font-awesome.min.css">
+        <link type="text/css" rel="stylesheet" href="assets/styles/gps-icon.css?v=11540001">
+        <link type="text/css" rel="stylesheet" href="assets/styles/inline.css">
+        <link type="text/css" rel="stylesheet" href="assets/styles/mobile_main.css?v=11540001">
+        <link type="text/css" rel="stylesheet" href="assets/styles/theme/components-rounded.css?v=11540001">
+        <link type="text/css" rel="stylesheet" href="assets/styles/main.css?v=11540002">
+
+    </head>
+    <body class="login">
+
+        <div class="logo page-logo">
+            <a href="javascript:;">
+                <img src="assets/images/maxtracker-lg.png" alt="maxtracker" width="330"/>
+            </a>
+        </div>
+
+        <div class="content">
+
+            <form class="login-form" id="form" action="" method="">
+                <h3 class="form-title">Entrar a mi cuenta</h3>
+
+                <div class="form-group">
+                    <label class="control-label visible-ie8 visible-ie9">Correo Electrónico</label>
+                    <div class="input-icon">
+                        <i class="fa fa-user font-yellow-gold"></i>
+                        <input class="form-control placeholder-no-fix" type="text" placeholder="Correo Electrónico" name="username" id="username">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="control-label visible-ie8 visible-ie9">Contraseña</label>
+                    <div class="input-icon">
+                        <i class="fa fa-lock font-yellow-gold"></i>
+                        <input class="form-control placeholder-no-fix" type="password" placeholder="Contraseña" name="password" id="password">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-koner" id="btnSubmit" name="btnSubmit">
+                        Entrar <i class="m-icon-swapright m-icon-white"></i>
+                    </button>
+                    O presione la tecla ENTER
+                </div>
+
+                <div id="result"></div>
+
+            </form>
+
+            <div class="loader hidden">
+                <div class="row" style="text-align: center;">
+                    <svg height="32" viewbox="0 0 32 32" width="32">
+                        <circle cx="16" cy="16" fill="none" id="spinner" r="14"></circle>
+                    </svg>
+                </div>
+                <div class="row">
+                    <div class="loader-message text-center"></div>
+                </div>
+            </div>
+
+        </div>
+    </body>
+</html>
+
+<!-- JS -->
+<script src="assets/scripts/plugins/jquery-1.11.0.min.js?v=11540001"></script>
+<script src="assets/scripts/plugins/jquery-ui/jquery-ui-1.10.3.custom.min.js?v=11540001" type="text/javascript"></script>
+<script src="assets/scripts/plugins/bootstrap/bootstrap.min.js?v=11540001"></script>
+<script src="assets/scripts/plugins/jquery-validation/js/jquery.validate.min.js?v=11540002"></script>
+<script src="assets/scripts/plugins/moment.js"></script>
+<script src="assets/scripts/plugins/hmac-sha256.js"></script>
+<script src="scripts/conf.js"></script>
+<script src="scripts/login.js"></script>
+<script src="scripts/app.js"></script>
