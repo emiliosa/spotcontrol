@@ -11,39 +11,40 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//var dataCacheName = 'cacheData';
-var cacheName = 'cacheResources';
+var version = '11560001';
+var domainPath = '/';
+var cacheName = 'cacheResources' + version;
 var filesToCache = [
-    '/',
-    'index.html',
-    'mark.html',
-    'scripts/app.js',
-    'scripts/conf.js',
-    'assets/bootstrap/bootstrap.min.css?v=11540001',
-    'assets/styles/theme/components-rounded.css?v=11540001',
-    'assets/styles/mobile_main.css?v=11540001',
-    'assets/styles/gps-icon.css?v=11540001',
-    'assets/images/maxtracker-lg.png',
-    'assets/images/maxtracker-sm.png',
-    'assets/images/ic_refresh_white_24px.svg',
-    'assets/images/map-marker-alt.svg',
-    'assets/images/sign-out-alt.svg',
-    'assets/images/no-avatar.jpg',
-    'assets/images/auto.png',
-    'assets/scripts/plugins/jquery-1.11.0.min.js?v=11540001',
-    'assets/scripts/plugins/jquery-ui/jquery-ui-1.10.3.custom.min.js?v=11540001',
-    'assets/scripts/plugins/bootstrap/bootstrap.min.js?v=11540001',
-    'assets/scripts/plugins/moment.js',
-    'assets/styles/inline.css',
-    'assets/styles/font-awesome.min.css',
-    'assets/fonts/fontawesome-webfont.eot',
-    'assets/fonts/fontawesome-webfont.ttf',
-    'assets/fonts/fontawesome-webfont.woff',
-    'assets/fonts/fontawesome-webfont.woff2',
-    'assets/scripts/plugins/jquery-1.11.0.min.js?v=11540001',
-    'assets/scripts/plugins/jquery-ui/jquery-ui-1.10.3.custom.min.js?v=11540001',
-    'assets/scripts/plugins/bootstrap/bootstrap.min.js?v=11540001',
-    'assets/scripts/plugins/hmac-sha256.js',
+    domainPath,
+    domainPath + 'index.html',
+    domainPath + 'mark.html',
+    domainPath + 'scripts/app.js',
+    domainPath + 'scripts/conf.js',
+    domainPath + 'scripts/login.js',
+    domainPath + 'assets/bootstrap/bootstrap.min.css',
+    domainPath + 'assets/styles/theme/components-rounded.css',
+    domainPath + 'assets/styles/main.css',
+    domainPath + 'assets/styles/mobile_main.css',
+    domainPath + 'assets/styles/gps-icon.css',
+    domainPath + 'assets/images/maxtracker-lg.png',
+    domainPath + 'assets/images/maxtracker-sm.png',
+    domainPath + 'assets/images/ic_refresh_white_24px.svg',
+    domainPath + 'assets/images/map-marker-alt.svg',
+    domainPath + 'assets/images/sign-out-alt.svg',
+    domainPath + 'assets/images/no-avatar.jpg',
+    domainPath + 'assets/images/auto.png',
+    domainPath + 'assets/scripts/plugins/jquery-1.11.0.min.js',
+    domainPath + 'assets/scripts/plugins/jquery-ui/jquery-ui-1.10.3.custom.min.js',
+    domainPath + 'assets/scripts/plugins/jquery-validation/js/jquery.validate.min.js',
+    domainPath + 'assets/scripts/plugins/bootstrap/bootstrap.min.js',
+    domainPath + 'assets/scripts/plugins/moment.js',
+    domainPath + 'assets/scripts/plugins/hmac-sha256.js',
+    domainPath + 'assets/styles/inline.css',
+    domainPath + 'assets/styles/font-awesome.min.css',
+    domainPath + 'assets/fonts/fontawesome-webfont.eot',
+    domainPath + 'assets/fonts/fontawesome-webfont.ttf',
+    domainPath + 'assets/fonts/fontawesome-webfont.woff',
+    domainPath + 'assets/fonts/fontawesome-webfont.woff2',
 ];
 
 self.addEventListener('install', function(e) {
@@ -64,18 +65,55 @@ self.addEventListener('activate', function(e) {
             }
         }));
     }));
-
+    return self.clients.claim();
 });
 
 self.addEventListener('fetch', function(e) {
     console.log('[Service Worker] Fetch Registred');
-    e.respondWith(caches.match(e.request).then(function(response) {
-        return response || fetch(e.request);
-    })
-    .catch(function() {
-        //Si devuelve datos de la cache pero no encuentra conexión en la red
-        console.log("Service Worker Offline");
-    })
-
+    e.respondWith(caches.match(e.request)
+        .then(function(response) {
+            return response || fetch(e.request);
+        })
+        .catch(function() {
+            //Si devuelve datos de la cache pero no encuentra conexión en la red
+            console.log("Service Worker Offline");
+        })
     );
 });
+
+
+// self.addEventListener('fetch', function(e) {
+//     console.log('[Service Worker] Fetch Registred');
+//     e.respondWith(fromNetwork(e.request, 10 * 1000)
+//         .catch(function() {
+//             return fromCache(e.request);
+//         })
+//     );
+// });
+
+function fromNetwork(request, timeout) {
+    console.log('fetch from network');
+
+    return new Promise(function(fulfill, reject) {
+        var timeoutId = setTimeout(reject, timeout);
+        fetch(request).then(function(response) {
+            console.warn('fetch fromNetwork rejected');
+            clearTimeout(timeoutId);
+            fulfill(response);
+        }, reject);
+    });
+}
+
+function fromCache(request) {
+    console.log('fetch from cache');
+    return caches.open(cacheName).then(function(cache) {
+        return cache.match(request)
+            .then(function(matching) {
+                return matching || Promise.reject('no-match');
+            })
+            .catch(function() {
+                //Si devuelve datos de la cache pero no encuentra conexión en la red
+                console.log("Service Worker Offline");
+            });
+    });
+}

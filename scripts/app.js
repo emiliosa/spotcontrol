@@ -11,8 +11,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 (function() {
     'use strict';
+    document.getElementById('canonical_link').href = SPOTCONTROL.domain;
     var app = {
         isLoading: true,
         visibleCards: {},
@@ -24,40 +26,18 @@
     };
     var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
     var dataBase = null;
-    var active = null;
-    var showSyncAll = 0;
 
-    $('.alert').addClass('hidden');
-    $('.card-searcher').addClass('hidden');
-    $('.card-result').addClass('hidden');
-    $('.input-group').addClass('hidden');
-    $('.login-form').addClass('hidden');
-
-    startDB();
-
-    /**
-     * Registro del service worker que permite el trabajo en estado offline de la aplicación
-     */
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/service-worker.js').then(function() {
-                console.log('Service Worker Registered');
-            }).catch(function(err) {
-                console.log('ServiceWorker registration failed: ', err);
-            });
-        });
-    }
     /**
      * Creación del almacén de objetos (DB)
+     *
      * @return void
      */
-    function startDB() {
+    app.startDB = function() {
         dataBase = indexedDB.open("spotcontrol", 1);
         dataBase.onupgradeneeded = function(e) {
-            active = dataBase.result;
 
             //Tabla Personas
-            var object = active.createObjectStore("persons", {
+            var object = dataBase.result.createObjectStore("persons", {
                 keyPath: 'id',
                 autoIncrement: true
             });
@@ -65,7 +45,7 @@
                 unique: false
             });
             //Tabla Vehículos
-            object = active.createObjectStore("vehicles", {
+            object = dataBase.result.createObjectStore("vehicles", {
                 keyPath: 'id',
                 autoIncrement: true
             });
@@ -73,7 +53,7 @@
                 unique: false
             });
             //Tabla Marcado
-            object = active.createObjectStore("spotcontrol_details", {
+            object = dataBase.result.createObjectStore("spotcontrol_details", {
                 keyPath: 'id',
                 autoIncrement: true
             });
@@ -84,27 +64,29 @@
                 unique: false
             });
             //Tabla Vencimiento
-            object = active.createObjectStore("expiration", {
+            object = dataBase.result.createObjectStore("expiration", {
                 keyPath: 'id',
                 autoIncrement: true
             });
             //Tabla usuario logueado
-            object = active.createObjectStore("users", {
+            object = dataBase.result.createObjectStore("users", {
                 keyPath: 'id',
                 autoIncrement: false
             });
             object.createIndex('by_username', 'username', {
-                unique: false
+                unique: true
             });
-            object.createIndex('by_token', 'token', {
+            /*object.createIndex('by_token', 'token', {
+                unique: true
+            });*/
+            object.createIndex('by_logged', 'logged', {
                 unique: true
             });
         };
         dataBase.onsuccess = function(e) {
             console.log('[spotcontrol] Base de Datos Creada');
-            active = dataBase.result;
             if (navigator.onLine) {
-                syncAllData(false);
+                app.checkExpiration(false);
             } else {
                 $('.card-searcher').removeClass('hidden');
                 $('.login-form').removeClass('hidden');
@@ -112,179 +94,81 @@
                 $('.loader').addClass('hidden');
             }
             getPosition(false);
-            checkUser();
+            app.checkUser();
+            checkConnectionStatus();
 
         };
         dataBase.onerror = function(e) {
             console.log('[Error] Creación de la DB');
+            hideLoader('Ha ocurrido un error en la creación de la DB', 'alert-danger');
         };
-    }
+    };
 
-    /*****************************************************************************
-     *
-     * Event listeners for UI elements
-     *
-     ****************************************************************************/
     /**
      * Ejecución del login a la aplicación, ejecuta el primer inicio de sesión al WS de ser éxitoso almacena internamente las credenciales
      * para poder realizar posteriores inicios de esión en modo offline
-     ** @return void
-     */
-    $('#btnSubmit').on('click', function() {
-        if ($('.login-form').validate().form()) {
-            var url = apiDir + "login";
-            var username = $('#username').val();
-            var password = $('#password').val();
-            //Logueo Online
-            if (navigator.onLine) {
-                $.ajax({
-                    'url': url,
-                    'type': "GET",
-                    'dataType': 'json',
-                    'data': {
-                        'username': username,
-                        'password': password,
-                    },
-                    //si la petición al WS devuelve datos
-                    success: function(response) {
-                        //Creación del token para logueo offline
-                        var token = CryptoJS.HmacSHA256(username + password, keyPhrase);
-                        var result = JSON.parse(JSON.stringify(response));
-                        if (result) {
-                            result.token = token.toString();
-                        }
-                        userLogin(result);
-                    },
-                    error: function(jqXHR, textStatus, errorThrown) {
-                        console.log("[Error] login online: " + textStatus);
-                    }
-                });
-            //Logueo Offline
-            } else {
-                var token = CryptoJS.HmacSHA256(username + password, keyPhrase);
-                var data = active.transaction(["users"], "readonly");
-                var object = data.objectStore("users");
-                var index = object.index("by_token");
-                var request = index.get(token.toString());
-                request.onsuccess = function() {
-                    var result = request.result;
-                    if (typeof result !== "undefined") {
-                        userLogin(result);
-                    } else {
-                        $('#result').html("<div class='alert alert-danger'>Correo electrónico y/o contraseña incorrectos</div>");
-                    }
-                };
-                request.onerror = function(e) {
-                    console.log('[Error] login offline: ' + request.error.name + '\n\n' + request.error.message);
-                };
-            }
-        }
-    });
-
-
-    /**
-     * Ejecución del marcado como controlado, en modo online realiza ejecuta enviando la petición al WS
-     * en modo offline, realiza el marcado dentro del almacenamiento interno
+     *
      * @return void
      */
-    $('#mark').on('click', function() {
-        var url = apiDir + "upload";
-        var element = [];
-        element.push({
-            'lng':          $('#hidden_lng').val(),
-            'lat':          $('#hidden_lat').val(),
-            'position':     $('#hidden_position').val(),
-            'observations': $('#text_observations').val(),
-            'date':         $('#hidden_date_mark').val(),
-            'plate_number': $('#hidden_plate_number').val(),
-            'dni':          $('#hidden_dni').val(),
-            'user_id':      $('#hidden_user_id').val(),
-            'type':         $('#hidden_type').val()
-        });
+    app.login = function() {
+        var username = $('#username').val();
+        var password = $('#password').val();
+        //Logueo Online
         if (navigator.onLine) {
             $.ajax({
-                'url': url,
-                'type': "GET",
-                'dataType': 'json',
-                'data': {
-                    'elements': element
+                url: SPOTCONTROL.API + "login",
+                type: "GET",
+                dataType: 'json',
+                data: {
+                    'username': username,
+                    'password': password,
                 },
-                //si la petición al WS devuelve datos
-                success: function(response) {
-                    if (response) {
-                        console.log('[spotcontrol_details] AJAX marcar vehículo o persona: ' + response);
-                        app.noResult('Marcado exitosamente', false, '');
-                    } else {
-                        console.log('[spotcontrol_details] AJAX error en procesamiento: ' + response);
-                    }
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.log('[Error] AJAX marcar vehículo o persona: ' + textStatus);
+                beforeSend: function() {
+                    checkConnectionStatus();
                 }
+            }).done(function(response) {
+                if (response) {
+                    //Creación del token para logueo offline
+                    //response.token = CryptoJS.HmacSHA256(username + password, SPOTCONTROL.keyPhrase).toString();
+                    app.userLogin(response);
+                }
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.log("[Error] login online: " + textStatus);
+            }).always(function(jqXHR, textStatus, errorThrown) {
+
             });
+        //Logueo Offline
         } else {
-            var data = active.transaction(["spotcontrol_details"], "readwrite");
-            var object = data.objectStore("spotcontrol_details");
-            var request = object.put(element[0]);
+            var token = CryptoJS.HmacSHA256(username + password, SPOTCONTROL.keyPhrase).toString();
+            var data = dataBase.result.transaction(["users"], "readonly");
+            var object = data.objectStore("users");
+            var index = object.index("by_");
+            var request = index.get(token);
 
+            request.onsuccess = function() {
+                var result = request.result;
+                if (typeof result !== "undefined") {
+                    app.userLogin(result);
+                } else {
+                    $('#result').html("<div class='alert alert-danger'>Correo electrónico y/o contraseña incorrectos</div>");
+                }
+            };
+            
             request.onerror = function(e) {
-                console.log('[Error] spotcontrol_details: ' + request.error.name + ', ' + request.error.message);
-            };
-
-            data.oncomplete = function(e) {
-                console.log('[spotcontrol_details] Marcado exitosamente');
-                app.noResult('Marcado exitosamente', false, '');
+                console.log('[Error] login offline: ' + request.error.name + '\n\n' + request.error.message);
+                hideLoader('Ha ocurrido un error en el intento de login', 'alert-danger');
             };
         }
-    });
-
-    //Boton buscar vehiculo
-    $('#btn_search_vehicle').on('click', function() {
-        searchItem('vehicle');
-    });
-    //Boton buscar persona
-    $('#btn_search_person').on('click', function() {
-        searchItem('person');
-    });
-    //Buscar vehiculo al presionar ENTER
-    $('#input_plate_number').on('keypress', function (e) {
-        if (e.which == 13) {
-            searchItem('vehicle');
-        }
-    });
-    //Buscar persona al presionar ENTER
-    $('#input_dni').on('keypress', function (e) {
-        if (e.which == 13) {
-            searchItem('person');
-        }
-    });
-    //Boton actualizar posición
-    $('#btn_refresh_position').on('click', function(){
-        disabledButtons(true);
-        getPosition(true);
-    });
-    //Boton sincronizar datos
-    $('#btn_sync_all').on('click', function(){
-        if (navigator.onLine) {
-            disabledButtons(true);
-            syncAllData(true);
-        } else {
-            $('.alert').html('No hay conexión disponible, la sincronización no se ha realizado');
-            $('.alert').removeClass('hidden');
-        }
-    });
-    //Boton cerrar sesión
-    $('#btn_logout').on('click', function(){
-        logout();
-    });
+    };
 
     /**
      * Buscar usuario logueado, cambiar su estado (logged=false) y redireccionar
+     *
      * @return void
      */
-    function logout() {
+    app.logout = function() {
         var userId = $('#hidden_user_id').val();
-        var data = active.transaction(["users"], "readwrite");
+        var data = dataBase.result.transaction(["users"], "readwrite");
         var object = data.objectStore("users");
         var request = object.get(userId);
 
@@ -306,9 +190,716 @@
         };
 
         data.oncomplete = function(e) {
-            redirect(domain + 'index.html', 'Su sesión se ha cerrado, redireccionando ...');
+            redirect(SPOTCONTROL.domain + 'index.html', 'Su sesión se ha cerrado, redireccionando');
         };
+    };
+
+    /**
+     * Ejecución del marcado como controlado, en modo online realiza ejecuta enviando la petición al WS
+     * en modo offline, realiza el marcado dentro del almacenamiento interno
+     *
+     * @return void
+     */
+    app.mark = function() {
+        var elements = [{
+            'lng':          $('#hidden_lng').val(),
+            'lat':          $('#hidden_lat').val(),
+            'position':     $('#hidden_position').val(),
+            'observations': $('#text_observations').val(),
+            'date':         $('#hidden_date_mark').val(),
+            'plate_number': $('#hidden_plate_number').val(),
+            'dni':          $('#hidden_dni').val(),
+            'user_id':      $('#hidden_user_id').val(),
+            'type':         $('#hidden_type').val()
+        }];
+
+        if (navigator.onLine) {
+            var msg = '';
+            var msgType = '';
+            
+            var data = dataBase.result.transaction(["users"], "readonly");
+            var object = data.objectStore("users");
+            var index = object.index("by_logged");
+            var request = index.get("true");
+            
+            request.onsuccess = function() {
+                var result = request.result;
+                
+                if (typeof result !== "undefined") {
+                    
+                    $.ajax({
+                        url: SPOTCONTROL.API + "upload",
+                        type: "GET",
+                        dataType: 'json',
+                        data: {
+                            'elements': elements
+                        },
+                        beforeSend: function() {
+                            request.setRequestHeader('jwt', result.jwt);
+                            checkConnectionStatus();
+                            showLoader('Guardando los datos, por favor aguarde unos minutos')
+                        }
+                    }).done(function(response) {
+                        if (response) {
+                            console.log('[spotcontrol_details] AJAX marcar vehículo o persona: ' + response);
+                            msg = 'Los datos han sido guardados exitosamente';
+                            msgType = 'alert-success';
+                        } else {
+                            console.log('[spotcontrol_details] AJAX error en procesamiento: ' + response);
+                            msg = 'Hubo un error al guardar los datos';
+                            msgType = 'alert-danger';
+                        }
+                    }).fail(function(jqXHR, textStatus, errorThrown) {
+                        console.log('[Error] AJAX marcar vehículo o persona: ' + textStatus);
+                        msg = 'Hubo un error al guardar los datos';
+                        msgType = 'alert-danger';
+                    }).always(function(jqXHR, textStatus, errorThrown) {
+                        hideLoader(msg, msgType);
+                    });
+                    
+                } else {
+                    msg = 'Hubo un error al guardar los datos';
+                    msgType = 'alert-danger';
+                    
+                    console.log("[uploadData] Error al realizar upload");
+                    noResult(msg, msgType, false, '');
+                }
+            };
+            
+            request.onerror = function() {
+                msg = 'Hubo un error al guardar los datos';
+                msgType = 'alert-danger';
+                
+                console.log("[uploadData] Error al realizar upload");
+                noResult(msg, msgType, false, '');
+            };
+                
+        } else {
+            var data = dataBase.result.transaction(["spotcontrol_details"], "readwrite");
+            var object = data.objectStore("spotcontrol_details");
+            var request = object.put(element[0]);
+
+            data.oncomplete = function(e) {
+                var msg = 'Los datos han sido guardados exitosamente';
+                var msgType = 'alert-success';
+
+                console.log('[spotcontrol_details] Los datos han sido guardados exitosamente (data.oncomplete)');
+                noResult(msg, msgType, false, '');
+            };
+
+            data.onerror = function(e) {
+                var msg = 'Hubo un error al guardar los datos';
+                var msgType = 'alert-danger';
+
+                console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
+                noResult(msg, msgType, false, '');
+            };
+        }
+    };
+
+
+    /**
+     * Búsqueda individual de los vehículos, primero busca en cache, si existe lo muestra, sino verifica que haya conexión y consulta a la API
+     * @param  {string} plate_number Número de patente del vehículo
+     * @return {json}   datos del vehículo
+     */
+    app.findVehicle = function(plate_number) {
+        var elements = [];
+        var data = dataBase.result.transaction(["vehicles"], "readonly");
+        var object = data.objectStore("vehicles");
+        var index = object.index("by_plate_number");
+        var request = index.get(String(plate_number));
+
+        request.onsuccess = function() {
+            var result = request.result;
+            elements.push(result);
+            if (typeof result !== "undefined") {
+                showVehicleList(elements);
+            } else {
+                if (navigator.onLine) {
+                    
+                    var data = dataBase.result.transaction(["users"], "readonly");
+                    var object = data.objectStore("users");
+                    var index = object.index("by_logged");
+                    var request = index.get("true");
+                    
+                    request.onsuccess = function() {
+                        var result = request.result;
+                        
+                        if (typeof result !== "undefined") {
+                            
+                            $.ajax({
+                                url: SPOTCONTROL.API + "vehicleByPlateNumber",
+                                type: "GET",
+                                dataType: 'json',
+                                data: {
+                                    'plate_number': plate_number
+                                },
+                                beforeSend: function() {
+                                    request.setRequestHeader('jwt', result.jwt);
+                                    checkConnectionStatus();
+                                    showLoader('Buscando el vehiculo ingresado, por favor aguarde unos minutos')
+                                }
+                            }).done(function(response) {
+                                hideLoader('', 'hidden', false);
+
+                                if (response) {
+                                    showVehicleList(response);
+                                    console.log('[findVehicle] AJAX vehículo encontrado');
+                                } else {
+                                    console.log('[findVehicle] AJAX vehículo NO encontrado');
+                                    noResult('No encontramos el vehículo que busca', 'alert-warning', true, 'vehicle');
+                                }
+                            }).fail(function(jqXHR, textStatus, errorThrown) {
+                                hideLoader('', 'hidden', false);
+                                console.log('[Error] AJAX findVehicle: ' + textStatus);
+                                noResult('No encontramos el vehículo que busca', 'alert-warning', true, 'vehicle');
+                            }).always(function(jqXHR, textStatus, errorThrown) {
+                                $('.card-marker').removeClass('hidden');
+                            });
+                        } else {
+                            var msg = 'Hubo un error al buscar los datos solicitados';
+                            var msgType = 'alert-danger';
+                            
+                            console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
+                            noResult(msg, msgType, true, 'vehicle');
+                        }
+                    };
+                    
+                    request.onerror = function() {
+                        var msg = 'Hubo un error al buscar los datos solicitados';
+                        var msgType = 'alert-danger';
+                        
+                        console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
+                        noResult(msg, msgType, true, 'vehicle');
+                    };
+                    
+                } else {
+                    console.log('[findVehicle] offline');
+                    noResult('No encontramos el vehículo que busca', 'alert-warning', true, 'vehicle');
+                }
+            }
+        };
+    };
+
+    /**
+     * Búsqueda individual de las personas, en estado online consulta al WS, en estado offline consulta el almacenamiento interno
+     * @param  {string} dni Número de DNI de la persona
+     * @return {json}   datos del vehículo
+     */
+    app.findPerson = function(dni) {
+        var elements = [];
+        var data = dataBase.result.transaction(["persons"], "readonly");
+        var object = data.objectStore("persons");
+        var index = object.index("by_dni");
+        var request = index.get(String(dni));
+
+        request.onsuccess = function() {
+            var result = request.result;
+            elements.push(result);
+            if (typeof result !== "undefined") {
+                showPersonList(elements);
+            } else {
+                if (navigator.onLine) {
+                    
+                    var data = dataBase.result.transaction(["users"], "readonly");
+                    var object = data.objectStore("users");
+                    var index = object.index("by_logged");
+                    var request = index.get("true");
+                    
+                    request.onsuccess = function() {
+                        var result = request.result;
+                        
+                        if (typeof result !== "undefined") {
+                            
+                            $.ajax({
+                                url: SPOTCONTROL.API + "personByDni",
+                                type: "GET",
+                                dataType: 'json',
+                                data: {
+                                    'dni': dni
+                                },
+                                beforeSend: function() {
+                                    request.setRequestHeader('jwt', result.jwt);
+                                    checkConnectionStatus();
+                                    showLoader('Buscando la persona ingresada, por favor aguarde unos minutos')
+                                }
+                            }).done(function(response) {
+                                var person = JSON.parse(JSON.stringify(response));
+
+                                hideLoader('', 'hidden', false);
+
+                                if (person !== false) {
+                                    showPersonList(person);
+                                    console.log('[findPerson] AJAX persona encontrada');
+                                } else {
+                                    console.log('[findPerson] AJAX persona NO encontrada');
+                                    noResult('No encontramos la persona que busca', 'alert-warning', true, 'person');
+                                }
+                            }).fail(function(jqXHR, textStatus, errorThrown) {
+                                hideLoader('', 'hidden', false);
+                                console.log('[Error] AJAX findPerson: ' + textStatus);
+                                noResult('No encontramos la persona que busca', 'alert-warning', true, 'person');
+                            }).always(function(jqXHR, textStatus, errorThrown) {
+                                $('.card-marker').removeClass('hidden');
+                            });
+                        } else {
+                            var msg = 'Hubo un error al buscar los datos solicitados';
+                            var msgType = 'alert-danger';
+                            
+                            console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
+                            noResult(msg, msgType, true, 'person');
+                        }
+                    };
+                    
+                    request.onerror = function() {
+                        var msg = 'Hubo un error al buscar los datos solicitados';
+                        var msgType = 'alert-danger';
+                        
+                        console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
+                        noResult(msg, msgType, true, 'person');
+                    };
+                        
+                } else {
+                    console.log("[findPerson] offline");
+                    noResult('No encontramos la persona que busca', 'alert-warning', true, 'person');
+                }
+            }
+        };
+    };
+
+    /**
+     * Registra la sesión del usuario
+     *
+     * @param  {json} result datos del usuario a registrar de ser vacio redirije a la página de inicio de sesión
+     * @return void
+     */
+    app.userLogin = function(result) {
+        if (result) {
+            var data = dataBase.result.transaction(["users"], "readwrite");
+            var object = data.objectStore("users");
+            var request = object.put({
+                id: result.id,
+                username: result.username,
+                token: result.token,
+                jwt: result.jwt,
+                logged: true,
+                loginTime: Date.now(),
+            });
+            request.onerror = function(e) {
+                console.log(request.error.name + '\n\n' + request.error.message);
+                window.location.replace(SPOTCONTROL.domain + "index.html");
+            };
+            data.oncomplete = function(e) {
+                //SPOTCONTROL.username = result.username;
+                window.location.replace(SPOTCONTROL.domain + "mark.html");
+            };
+        } else {
+            $('#result').html("<div class='alert alert-danger'>Correo electrónico y/o contraseña incorrectos</div>");
+        }
+    };
+
+    /**
+     * Verifica si la sesión de usuario existe o está vencida
+     *
+     * @return void
+     */
+    app.checkUser = function() {
+        var data = dataBase.result.transaction(['users'], 'readwrite');
+        var object = data.objectStore('users');
+        var cursor = object.openCursor();
+
+        cursor.onsuccess = function(e) {
+            var result = e.target.result;
+            var url;
+            if (result === null || !result.value.logged) {
+                console.log('Usuario No Logueado');
+                url = SPOTCONTROL.domain + 'index.html';
+                if (window.location != url) {
+                    redirect(url, 'No ha iniciado sesión, redireccionando');
+                }
+            } else {
+                var date1 = moment(result.value.loginTime);
+                var date2 = moment(Date.now());
+                console.log('Usuario Logueado');
+                $('#hidden_user_id').val(result.value.id);
+                if (date2.diff(date1, 'minutes') > SPOTCONTROL.sessionTime) {
+                    console.log('Sesión Vencida');
+                    object.clear();
+                    url = SPOTCONTROL.domain + 'index.html';
+                    if (window.location != url) {
+                        redirect(url, "Su sesión ha vencido, redireccionando");
+                    }
+                } else if(result.value.logged) {
+                    url = SPOTCONTROL.domain + 'mark.html';
+                    if (window.location != url) {
+                        $('.login-form').html("Usted ya ha iniciado sesión, redireccionando");
+                        redirect(url);
+                    }
+                }
+            }
+        }
+    };
+
+    /**
+     * Verifica si la fecha de vencimiento de los datos de los objetos vehicles, persons fue superada,
+     * de ser así limpia las tablas y estipula como nueva fecha de vencimiento la actual
+     *
+     * @param boolean forceUpdate
+     * @return void
+     */
+    app.checkExpiration = function(forceUpdate = false) {
+        var data = dataBase.result.transaction(['expiration'], 'readonly');
+        var object = data.objectStore('expiration');
+        var cursor = object.openCursor();
+
+        cursor.onsuccess = function(e) {
+            var result = e.target.result;
+
+            // si la base local está vacía, invoco a la API
+            if (result === null) {
+                console.log('[Expiration] Sin datos');
+
+                app.syncAllData();
+
+            } else {
+
+                //si el usuario fuerza la actualización de datos, invoco a la API
+                if (forceUpdate) {
+                    app.clear('persons');
+                    app.clear('vehicles');
+                    app.syncAllData();
+
+                } else {
+                    var date1 = moment(result.value.date);
+                    var date2 = moment(Date.now());
+
+                    // si los datos expiraron, invoco a la API
+                    if (date2.diff(date1, 'minutes') > SPOTCONTROL.expiredTime) {
+                        console.log('[Expiration] Sincronización data vencida');
+
+                        app.clear('persons');
+                        app.clear('vehicles');
+                        app.syncAllData();
+
+                    } else {
+                        disabledButtons(false);
+                        $('.input-group').removeClass('hidden');
+                        $('.login-form').removeClass('hidden');
+                        $('.card-searcher').removeClass('hidden');
+                        $('.loader').addClass('hidden');
+                    }
+                }
+            }
+        };
+    };
+
+    /**
+     * Obtiene datos de la API
+     *
+     * @param string type
+     * @return Promise
+     */
+    app.loadDataFromAPI = function(type) {
+        var data = dataBase.result.transaction(["users"], "readonly");
+        var object = data.objectStore("users");
+        var index = object.index("by_logged");
+        var request = index.get("true");
+
+        request.onsuccess = function() {
+            var result = request.result;
+            
+            if (typeof result !== "undefined") {
+                
+                return 
+                    $.ajax({
+                        url: SPOTCONTROL.API + type,
+                        type: "GET",
+                        dataType: 'json',
+                        data: type,
+                        timeout: 30 * 60 * 1000,
+                        beforeSend: function(request) {
+                            request.setRequestHeader('jwt', result.jwt);
+                            checkConnectionStatus();
+                            showLoader('Actualizando los datos, por favor aguarde unos minutos')
+                        }
+                    }).done(function(response) {
+                        var values = JSON.stringify(response);
+
+                        switch (type) {
+                            case 'vehicles':
+                                app.vehicles = values;
+                                app.saveVehicles();
+                                break;
+                            case 'persons':
+                                app.persons = values;
+                                app.savePersons();
+                                break;
+                        }
+                        console.log('[firstSyncDownload] (' + type + '): Getting data from WS');
+                    }).fail(function(jqXHR, textStatus, errorThrown) {
+                        console.log('[Error] AJAX firstSyncDownload: ' + textStatus);
+                    }).always(function(jqXHR, textStatus, errorThrown) {});
+            } else {
+                console.log("[loadDataFromAPI] Error al obtener datos del usuario");
+            }
+        };
+        
+        request.onerror = function() {
+            console.log("[loadDataFromAPI] Error al obtener datos del usuario");
+        };
+
+    };
+
+    /**
+     * Sube las marcas realizadas en modo offline
+     *
+     * @param string elements
+     * @return Promise
+     */
+    app.uploadData = function(elements) {
+        var data = dataBase.result.transaction(["users"], "readonly");
+        var object = data.objectStore("users");
+        var index = object.index("by_logged");
+        var request = index.get("true");
+        
+        request.onsuccess = function() {
+            var result = request.result;
+            
+            if (typeof result !== "undefined") {
+
+                return 
+                    $.ajax({
+                        url: SPOTCONTROL.API + "upload",
+                        type: "POST",
+                        dataType: 'json',
+                        data: {
+                            'elements': elements,
+                        },
+                        beforeSend: function(request) {
+                            request.setRequestHeader('jwt', result.jwt);
+                            checkConnectionStatus();
+                            showLoader('Actualizando los datos, por favor aguarde unos minutos')
+                        }
+                    }).done(function(response) {
+                        if (response) {
+                            var data = dataBase.result.transaction(['spotcontrol_details'], 'readwrite');
+                            var object = data.objectStore('spotcontrol_details');
+
+                            object.clear();
+                            console.log('[syncUpload] AJAX syncUpload exitoso');
+                        } else {
+                            console.log('[syncUpload] AJAX syncUpload failed from WS');
+                        }
+                    }).fail(function(jqXHR, textStatus, errorThrown) {
+                        console.log('[Error] AJAXtermi syncUpload: ', textStatus);
+                    }).always(function(jqXHR, textStatus, errorThrown) {});
+            } else {
+                console.log("[uploadData] Error al realizar upload");
+            }
+        };
+        
+        request.onerror = function() {
+            console.log("[uploadData] Error al realizar upload");
+        };
+    };
+
+    /**
+     * Verifica si los objetos ya se encuentran cargados en el almacenamiento local
+     *
+     * @param string type Tipo de objeto a verificar (persons, vehicles)
+     * @return void
+     */
+    app.syncAllData = function() {
+        var msg = '';
+        var msgType = '';
+
+        var url = SPOTCONTROL.API + "upload";
+        var data = dataBase.result.transaction(['spotcontrol_details'], "readonly");
+        var object = data.objectStore('spotcontrol_details');
+        var cursor = object.openCursor();
+        var elements = [];
+
+        cursor.onsuccess = function(e) {
+            var result = e.target.result;
+            if (result === null) {
+                return;
+            }
+            elements.push(result.value);
+            result.continue();
+        };
+
+        data.oncomplete = function(e) {
+            if (navigator.onLine) {
+                var msg = '';
+                var msgType = '';
+
+                Promise.all([
+                    app.uploadData(elements),
+                    app.loadDataFromAPI('vehicles'),
+                    app.loadDataFromAPI('persons')
+                ]).then(function() {
+                    var expiration = dataBase.result.transaction(['expiration'], 'readwrite');
+                    var expirationObject = expiration.objectStore('expiration');
+                    
+                    msg = 'Se actualizaron todos los datos';
+                    msgType = 'alert-success';
+
+                    expirationObject.clear();
+                    expirationObject.put({
+                        date: Date.now()
+                    });
+
+                    disabledButtons(false);
+                    hideLoader(msg, msgType);
+                }).catch(function() {
+                    msg = 'Hubo un error en la actualización los datos';
+                    msgType = 'alert-danger';
+
+                    disabledButtons(false);
+                    hideLoader(msg, msgType);
+                });
+            } else {
+                console.log('[syncUpload] offline');
+            }
+        };
+
+        data.onerror = function(e) {
+            var msg = 'Hubo un error al sincronizar los datos';
+            var msgType = 'alert-danger';
+            showSyncAll = 0;
+
+            console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
+            hideLoader(msg, msgType);
+        };
+
+
     }
+
+    /**
+     * Realiza el borrado de los datos del objeto dentro del almacenamiento local deseado
+     *
+     * @param string type Objeto a borrar
+     * @return void
+     */
+    app.clear = function(type) {
+
+        var data = dataBase.result.transaction([type], "readwrite");
+        var object = data.objectStore(type);
+        object.clear();
+        data.oncomplete = function(event) {
+            console.log('Limpiando ' + type);
+        };
+    };
+
+    /**
+     * Almacenamiento de los vehiculos localmente
+     * @return void
+     */
+    app.saveVehicles = function() {
+        var data = dataBase.result.transaction(["vehicles"], "readwrite");
+        var object = data.objectStore("vehicles");
+        var vehicles = JSON.parse(app.vehicles);
+
+        $.each(vehicles, function(key, vehicle) {
+            var request = object.put({
+                id: vehicle.id,
+                plate_number: vehicle.plate_number,
+                name: vehicle.name,
+                brand: vehicle.brand,
+                model: vehicle.model,
+                color: vehicle.color,
+                enable: vehicle.enable,
+                gps: vehicle.gps,
+                docs: vehicle.docs,
+                passengers: vehicle.passengers,
+                driver: vehicle.driver,
+            });
+            request.onerror = function(e) {
+                console.log(request.error.name + '\n\n' + request.error.message);
+            };
+            request.onsuccess = function(e) {}
+        });
+
+        console.log('Saving data into localStorage Vehicles');
+    };
+
+    /**
+     * Almacenamiento de las personas localmente
+     * @return void
+     */
+    app.savePersons = function() {
+        var data = dataBase.result.transaction(["persons"], "readwrite");
+        var object = data.objectStore("persons");
+        var persons = JSON.parse(app.persons);
+
+        $.each(persons, function(key, person) {
+            var request = object.put({
+                id: person.id,
+                dni: person.dni,
+                fullname: person.fullname,
+                enable: person.enable,
+                docs: person.docs,
+            });
+            request.onerror = function(e) {
+                console.log(request.error.name + '\n\n' + request.error.message);
+            };
+        });
+
+        console.log('Saving data into localStorage Persons');
+    };
+
+    // Boton login
+    $('#btnSubmit').on('click', function() {
+        if ($('.login-form').validate().form()) {
+            app.login();
+        }
+    });
+    // Boton marcar vehiculo/persona
+    $('#mark').on('click', function() {
+        app.mark();
+    });
+    // Boton buscar vehiculo
+    $('#btn_search_vehicle').on('click', function() {
+        searchItem('vehicle');
+    });
+    // Boton buscar persona
+    $('#btn_search_person').on('click', function() {
+        searchItem('person');
+    });
+    // Buscar vehiculo al presionar ENTER
+    $('#input_plate_number').on('keypress', function (e) {
+        if (e.which == 13) {
+            searchItem('vehicle');
+        }
+    });
+    // Buscar persona al presionar ENTER
+    $('#input_dni').on('keypress', function (e) {
+        if (e.which == 13) {
+            searchItem('person');
+        }
+    });
+    // Boton actualizar posición
+    $('#btn_refresh_position').on('click', function(e){
+        disabledButtons(true);
+        getPosition(true);
+    });
+    // Boton sincronizar datos
+    $('#btn_sync_all').on('click', function(e){
+        if (navigator.onLine) {
+            disabledButtons(true);
+            app.checkExpiration(true);
+        } else {
+            $('.alert-message')
+                .html('No hay conexión disponible, la actualización no se ha realizado')
+                .addClass('alert-warning')
+                .removeClass('hidden');
+        }
+    });
+    // Boton cerrar sesión
+    $('#btn_logout').on('click', function(e){
+        app.logout();
+    });
 
     /**
      * Buscar item (persona o vehículo) ingresado por el usuario
@@ -316,20 +907,20 @@
      * @return void
      */
     function searchItem(field) {
-        $('.alert').addClass('hidden');
+        $('.alert-message').addClass('hidden');
         switch (field) {
             case 'vehicle':
                 if ($('#input_plate_number').val().length > 0) {
                     var vehicle = app.findVehicle($('#input_plate_number').val().toUpperCase());
                 } else {
-                    app.noResult('Por favor, ingrese la patente para realizar la búsqueda', false, '');
+                    noResult('Por favor, ingrese la patente para realizar la búsqueda', 'alert-warning', false, '');
                 }
                 break;
             case 'person':
                 if ($('#input_dni').val().length > 0) {
                     var person = app.findPerson($('#input_dni').val());
                 } else {
-                    app.noResult('Por favor, ingrese el dni para realizar la búsqueda', false, '');
+                    noResult('Por favor, ingrese el dni para realizar la búsqueda', 'alert-warning', false, '');
                 }
                 break;
         }
@@ -347,26 +938,15 @@
     }
 
     /**
-     * Sincronizar datos (persons, vehicles, spotcontrol_details)
-     * @param boolean forceUpdate Si la sincronización es solicitada por el usuario o bien en cada refresh / expiración de datos
-     * @return void
-     */
-    function syncAllData(forceUpdate) {
-        showSyncAll = 0;
-        showLoader('Sincronizando datos, por favor aguarde unos minutos ...');
-        app.syncUpload();
-        expiration(forceUpdate);
-    }
-
-    /**
      * Mostrar loader / spinner con mensaje de acción a realizar
+     *
      * @param String msg Mensaje de acción a realizar
      * @return void
      */
-    function showLoader(msg) {
+    function showLoader(msg, $class) {
         $('.login-form').addClass('hidden');
         $('.input-group').addClass('hidden');
-        $('.alert').addClass('hidden');
+        $('.alert-message').addClass('hidden');
         $('.card-result').addClass('hidden');
         $('.card-marker').addClass('hidden');
         $('.loader-message').html(msg);
@@ -375,263 +955,146 @@
 
     /**
      * Ocultar loader / spinner con mensaje de respuesta
+     *
      * @param String msg Mensaje de respuesta de acción realizada
      * @return void
      */
-    function hideLoader(msg) {
+    function hideLoader(msg, $class, showMsg = true) {
         $('.input-group').removeClass('hidden');
         $('.login-form').removeClass('hidden');
-        $('.alert').html(msg);
-        $('.alert').removeClass('hidden');
+        $('.alert-message').html(msg);
+        $('.alert-message')
+            .removeClass('alert-warning')
+            .removeClass('alert-danger')
+            .removeClass(showMsg ? 'hidden' : '')
+            .addClass($class);
         $('.loader').addClass('hidden');
     }
 
     /**
      * Redireccionar a url especificada
+     *
      * @param String url Página a redireccionar
      * @param String msg Mensaje a mostrar antes de redireccionar
      * @param Integer seconds Segundos a esperar antes de ser redireccionado
      * @return void
      */
     function redirect(url, msg = '', seconds = 3) {
-        $('.alert').html(msg);
-        $('.alert').removeClass('hidden');
+        $('.alert-message')
+            .html(msg)
+            .addClass('alert-info')
+            .removeClass('hidden');
         setInterval(function() {
             window.location.replace(url);
         }, seconds * 1000);
     }
 
+    function checkConnectionStatus() {
+        const connectionEffectiveType = navigator.connection.effectiveType;
 
-    /*****************************************************************************
-     *
-     * Sinconización y búsqueda
-     *
-     ****************************************************************************/
-    /**
-     * Sincronización inicial de los objetos (persons, vehicles, users), para el almacenamiento interno
-     * @param  string type Es el tipo de objeto a sincronizar valores soportados vehicles, persons, users
-     * @return void
-     */
-    app.firstSyncDownload = function(type) {
-        var url = apiDir + type;
+        // check if effectiveType is supported
+        if (connectionEffectiveType) {
+            var slowConnection = true;
 
-        $.ajax({
-            'url': url,
-            'type': "GET",
-            'dataType': 'json',
-            'data': type,
-            'timeout': 30 * 60 * 1000,
-            //si la petición al WS devuelve datos
-            success: function(response) {
-                var values = JSON.stringify(response);
-                switch (type) {
-                    case 'vehicles':
-                        app.vehicles = values;
-                        app.saveVehicles();
-                        break;
-                    case 'persons':
-                        app.persons = values;
-                        app.savePersons();
-                        break;
-                }
-                console.log('[firstSyncDownload] (' + type + '): Getting data from WS');
-                app.syncAllDataCheck();
-            },
-            error: function(jqXHR, textStatus, errorThrown) {
-                console.log('[Error] AJAX firstSyncDownload: ' + textStatus);
-            },
-            complete: function() {}
-        });
-    };
-
-    /**
-     * Función para la subida de los datos de vehículos controlado,la cual se ejecuta cada vez que la aplicación es
-     * usada en estado online
-     * @return void
-     */
-    app.syncUpload = function() {
-        var url = apiDir + "upload";
-        var data = active.transaction(['spotcontrol_details'], "readwrite");
-        var object = data.objectStore('spotcontrol_details');
-        var elements = [];
-        object.openCursor().onsuccess = function(e) {
-            var result = e.target.result;
-            if (result === null) {
-                return;
+            switch (connectionEffectiveType) {
+                case "slow-2g":
+                case "2g":
+                    slowConnection = true;
+                    break;
+                case "3g":
+                case "4g":
+                    slowConnection = false;
+                    break;
             }
-            elements.push(result.value);
-            result.continue();
-        };
-        data.oncomplete = function(e) {
-            if (elements.length == 0) {
-                console.log("[syncUpload] AJAX nada que sincronizar");
-            } else if (navigator.onLine) {
-                    $.ajax({
-                        'url': url,
-                        'type': "GET",
-                        'dataType': 'json',
-                        'data': {
-                            'elements': elements,
-                        },
-                        //si la petición al WS devuelve datos
-                        success: function(response) {
-                            if (response) {
-                                var data = active.transaction(['spotcontrol_details'], 'readwrite');
-                                var object = data.objectStore('spotcontrol_details');
-                                object.clear();
-                                console.log('[syncUpload] AJAX syncUpload exitoso');
-                                //$('#btnSyncAll').html('Actualizar datos (0)');
-                            } else {
-                                console.log('[syncUpload] AJAX syncUpload failed from WS');
-                            }
-                        },
-                        error: function(jqXHR, textStatus, errorThrown) {
-                            console.log('[Error] AJAX syncUpload: ', textStatus);
-                        },
-                        complete: function() {}
-                    });
-            } else {
-                console.log('[syncUpload] offline');
-            }
-            app.syncAllDataCheck();
-        };
-    }
 
-    /**
-     * Verificar si se sincronizaron todos los dados (vehicles, persons, spotcontrol_details)
-     * @return void
-     */
-    app.syncAllDataCheck = function() {
-        //se sincronizan 3 tipos de elementos
-        if (showSyncAll === 2) {
-            disabledButtons(false);
-            hideLoader('Se actualizaron todos los datos');
-        } else {
-            showSyncAll++;
+            if (slowConnection) {
+                $('.alert-low-quality-connection').html('Se ha detectado una conexión de baja calidad');
+                $('.alert-low-quality-connection').removeClass('hidden');
+            }
         }
     }
 
     /**
-     * Búsqueda individual de los vehículos, en estado online consulta al WS, en estado offline consulta el almacenamiento interno
-     * @param  {string} plate_number Número de patente del vehículo
-     * @return {json}   datos del vehículo
+     * Obtención de la fecha actual
+     * @return {string} Retorna fecha actual en formato dd/mm/yyyy:h:m:s
      */
-    app.findVehicle = function(plate_number) {
-        var url = apiDir + "vehicleByPlateNumber";
-        var elements = [];
-        var data = active.transaction(["vehicles"], "readonly");
-        var object = data.objectStore("vehicles");
-        var index = object.index("by_plate_number");
-        var request = index.get(String(plate_number));
-        request.onsuccess = function() {
-            var result = request.result;
-            elements.push(result);
-            if (typeof result !== "undefined") {
-                //getPosition();
-                app.updateVehicleList(elements);
-            } else {
-                app.noResult('No encontramos el vehículo que busca', true, 'vehicle');
-            }
-            $('.card-marker').removeClass('hidden');
-        };
-        if (navigator.onLine) {
-            $.ajax({
-                'url': url,
-                'type': "GET",
-                'dataType': 'json',
-                'data': {
-                    'plate_number': plate_number
-                },
-                //si la petición al WS devuelve datos
-                success: function(response) {
-                    var vehicle = JSON.parse(JSON.stringify(response));
-                    if (vehicle !== false) {
-                        //getPosition();
-                        app.updateVehicleList(vehicle);
-                        console.log('[findVehicle] AJAX vehículo encontrado');
-                    } else {
-                        console.log('[findVehicle] AJAX vehículo NO encontrado');
-                        app.noResult('No encontramos el vehículo que busca', true, 'vehicle');
-                    }
-                    $('.card-marker').removeClass('hidden');
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.log('[Error] AJAX findVehicle: ' + textStatus);
-                }
-            });
-        } else {
-            console.log('[findVehicle] offline')
-        }
-    };
+    function today() {
+        var d = new Date();
+        var month = d.getMonth() + 1;
+        var day = d.getDate();
+        var hour = d.getHours();
+        var minute = d.getMinutes();
+        var seconds = d.getSeconds();
+        var output = d.getFullYear() + '-' + (month < 10 ? '0' : '') + month + '-' + (day < 10 ? '0' : '') + day + ' ' + hour + ':' + minute + ':' + seconds;
+        return output;
+    }
 
     /**
-     * Búsqueda individual de las personas, en estado online consulta al WS, en estado offline consulta el almacenamiento interno
-     * @param  {string} dni Número de DNI de la persona
-     * @return {json}   datos del vehículo
+     * Obtención de la posición de estar disponible (latitud y longitud) desde donde se está usando a aplicación
+     * @return void
      */
-    app.findPerson = function(dni) {
-        var url = apiDir + "personByDni";
-        var elements = [];
-        var data = active.transaction(["persons"], "readonly");
-        var object = data.objectStore("persons");
-        var index = object.index("by_dni");
-        var request = index.get(String(dni));
-        request.onsuccess = function() {
-            var result = request.result;
-            elements.push(result);
-            if (typeof result !== "undefined") {
-                //getPosition();
-                app.updatePersonList(elements);
-            } else {
-                app.noResult('No encontramos la persona que busca', true, 'person');
-                //getPosition();
-            }
-            $('.card-marker').removeClass('hidden');
-        };
-        if (navigator.onLine) {
-            $.ajax({
-                'url': url,
-                'type': "GET",
-                'dataType': 'json',
-                'data': {
-                    'dni': dni
-                },
-                //si la petición al WS devuelve datos
-                success: function(response) {
-                    var person = JSON.parse(JSON.stringify(response));
-                    if (person !== false) {
-                        //getPosition();
-                        app.updatePersonList(person);
-                        console.log('[findPerson] AJAX persona encontrada');
-                    } else {
-                        //getPosition();
-                        console.log('[findPerson] AJAX persona NO encontrada');
-                        app.noResult('No encontramos la persona que busca', true, 'person');
-                    }
-                    $('.card-marker').removeClass('hidden');
-                },
-                error: function(jqXHR, textStatus, errorThrown) {
-                    console.log('[Error] AJAX findPerson: ' + textStatus);
-                }
-            });
-        } else {
-            console.log("[findPerson] offline");
-        }
-    };
+    function getPosition(forceUpdate) {
+        if (navigator.geolocation) {
 
-    /*****************************************************************************
-     *
-     * Actualización UI
-     *
-     ****************************************************************************/
+            //si actualizo la posición por pedido del usuario
+            if (forceUpdate) {
+                disabledButtons(true);
+                showLoader('Obteniendo ubicación, por favor aguarde unos minutos ...')
+            }
+
+            var options = {
+                enableHighAccuracy: true,
+                timeout: 5 * 1000,
+                maximumAge: 5 * 60 * 1000
+            };
+
+            navigator.geolocation.getCurrentPosition(success, error, options);
+
+            function success(position) {
+                var coordenadas = position.coords;
+
+                console.log('Tu posición actual es: lat=' + coordenadas.latitude + ', lon=' + coordenadas.longitude + ', ' + coordenadas.accuracy + ' metros.');
+
+                $('#hidden_lng').val(coordenadas.latitude);
+                $('#hidden_lat').val(coordenadas.longitude);
+
+                //si actualizo la posición por pedido del usuario
+                if (forceUpdate) {
+                    disabledButtons(false);
+                    hideLoader('Posición actualizada', 'alert-success');
+                }
+
+            };
+
+            function error(error) {
+                console.warn('ERROR(' + error.code + '): ' + error.message);
+
+                $('#hidden_lng').val('');
+                $('#hidden_lat').val('');
+                $('#hidden_position').val('');
+
+                //si actualizo la posición por pedido del usuario
+                if (forceUpdate) {
+                    disabledButtons(false);
+                    hideLoader('Posición no actualizada', 'alert-warning');
+                }
+            }
+
+        } else {
+            console.log('[navigator.geolocation] false');
+        }
+    }
+
     /**
      * Muestra de los datos del vehículo en pantalla
+     *
      * @param  {[json]} vehicles Datos del vehículo a mostrar
      * @return void
      */
-    app.updateVehicleList = function(vehicles) {
+     function showVehicleList(vehicles) {
         var card = "";
         $('.card-result').removeClass('hidden');
+        $('.card-marker').removeClass('hidden');
         $.each(vehicles, function(key, data) {
             app.containerJQuery.empty();
             card = app.cardTemplate.cloneNode(true);
@@ -644,7 +1107,7 @@
             $('.title-gps').removeClass('hidden');
             $('#hidden_plate_number').val(data.plate_number);
             $('#hidden_type').val('vehicle');
-            $('#hidden_date_mark').val(app.today());
+            $('#hidden_date_mark').val(today());
             $('#text_observations').val(null);
             $('.img-identifier').attr('src', 'assets/images/auto.png');
             $('.dniModel').html('Marca/Modelo/Color');
@@ -711,14 +1174,15 @@
                 }
             });
         });
-    };
+    }
 
     /**
      * Muestra de los datos de la persona en pantalla
+     *
      * @param  {[json]} vehicles Datos de la persona a mostrar
      * @return void
      */
-    app.updatePersonList = function(persons) {
+     function showPersonList(persons) {
         var card = "";
         $.each(persons, function(key, data) {
             $('.card-result').removeClass('hidden');
@@ -733,7 +1197,7 @@
             $('.passengersStatus').addClass('hidden');
             $('.title-driver-name').addClass('hidden');
             $('.title-gps').addClass('hidden');
-            $('#hidden_date_mark').val(app.today());
+            $('#hidden_date_mark').val(today());
             $('#hidden_dni').val(data.dni);
             $('#text_observations').val(null);
             $('#hidden_type').val('person');
@@ -772,15 +1236,20 @@
     /**
      * Mensaje a mostrar en caso de que se realice una búsqueda que no devuelve datos o se necesite mostrar información al usuario
      * que no provenga de la búsqueda de vehículos o personas
+     *
      * @param  {string} message Mensaje a mostrar
      * @param  {Boolean} showMark true muestra opción de marcado, false mantiene oculta la opción de marcado
      * @param  {string} type Tipo de objeto a marcar vehicles o person
      * @return void
      */
-    app.noResult = function(message, showMark, type) {
+     function noResult(msg, msgType, showMark, type) {
         $('.card-result').addClass('hidden');
-        $('.alert').html(message);
-        $('.alert').removeClass('hidden');
+        $('.alert-message')
+            .html(msg)
+            .removeClass('alert-warning')
+            .removeClass('alert-danger')
+            .removeClass('hidden')
+            .addClass(msgType)
         $('.card-result').addClass('hidden');
         $('.title-documents').addClass('hidden');
         $('.passengersName').addClass('hidden');
@@ -789,7 +1258,7 @@
         if (showMark == true) {
             $('.card-marker').removeClass('hidden');
             $('.plateDni').removeClass('hidden');
-            $('#hidden_date_mark').val(app.today());
+            $('#hidden_date_mark').val(today());
             $('#text_observations').val(null);
             $('#hidden_type').val(type);
             $('#hidden_dni').val($('#input_dni').val());
@@ -799,316 +1268,21 @@
         }
         $('.title-driver-name').addClass('hidden');
         $('.title-gps').addClass('hidden');
-    };
+    }
 
-    /*****************************************************************************
-     *
-     * Metodos de consulta y almacenamiento
-     *
-     ****************************************************************************/
     /**
-     * Registra la sesión del usuario
-     * @param  {json} result datos del usuario a registrar de ser vacio redirije a la página de inicio de sesión
-     * @return void
+     * Registro del service worker que permite el trabajo en estado offline de la aplicación
      */
-    function userLogin(result) {
-        if (result) {
-            var data = active.transaction(["users"], "readwrite");
-            var object = data.objectStore("users");
-            var request = object.put({
-                id: result.id,
-                username: result.username,
-                token: result.token,
-                logged: true,
-                loginTime: Date.now(),
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register(SPOTCONTROL.domainPath + 'service-worker.js', {scope: SPOTCONTROL.domainPath}).then(function() {
+                console.log('Service Worker Registered');
+            }).catch(function(err) {
+                console.log('ServiceWorker registration failed: ', err);
             });
-            request.onerror = function(e) {
-                console.log(request.error.name + '\n\n' + request.error.message);
-                window.location.replace(domain + "index.html");
-            };
-            data.oncomplete = function(e) {
-                window.location.replace(domain + "mark.html");
-            };
-        } else {
-            $('#result').html("<div class='alert alert-danger'>Correo electrónico y/o contraseña incorrectos</div>");
-        }
-    }
-
-    /**
-     * Verifica si la sesión de usuario existe o está vencida
-     * @return void
-     */
-    function checkUser() {
-        var data = active.transaction(['users'], 'readwrite');
-        var object = data.objectStore('users');
-        object.openCursor().onsuccess = function(e) {
-            var result = e.target.result;
-            var url;
-            if (result === null || !result.value.logged) {
-                console.log('Usuario No Logueado');
-                url = domain + 'index.html';
-                if (window.location != url) {
-                    redirect(url, 'No ha iniciado sesión, redireccionando ...');
-                }
-            } else {
-                var date1 = moment(result.value.loginTime);
-                var date2 = moment(Date.now());
-                console.log('Usuario Logueado');
-                $('#hidden_user_id').val(result.value.id);
-                if (date2.diff(date1, 'hours') > sessionTime) {
-                    console.log('Sesión Vencida');
-                    object.clear();
-                    url = domain + 'index.html';
-                    if (window.location != url) {
-                        redirect(url, "Su sesión ha vencido, redireccionando ...");
-                    }
-                } else if(result.value.logged) {
-                    url = domain + 'mark.html';
-                    if (window.location != url) {
-                        $('.login-form').html("Usted ya ha iniciado sesión, redireccionando ...");
-                        redirect(url);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Verifica si la fecha de vencimiento de los datos de los objetos vehicles, persons y users fue superada de ser así limpia las tablas y estipula como nueva
-     * fecha de vencimiento la actual
-     * @param Boolean forceUpdate Indica si 
-     * @return void
-     */
-    function expiration(forceUpdate = false) {
-        var data = active.transaction(['expiration'], 'readwrite');
-        var object = data.objectStore('expiration');
-        object.openCursor().onsuccess = function(e) {
-            var result = e.target.result;
-            if (result === null) {
-                console.log('[Expiration] Sin datos');
-
-                loadAll('persons');
-                loadAll('vehicles');
-
-                object.put({
-                    date: Date.now()
-                });
-
-            } else {
-
-                //si el usuario fuerza la actualización de datos
-                if (forceUpdate) {
-                    clear('persons');
-                    clear('vehicles');
-
-                    loadAll('persons');
-                    loadAll('vehicles');
-
-                } else {
-                    var date1 = moment(result.value.date);
-                    var date2 = moment(Date.now());
-
-                    if (date2.diff(date1, 'hours') > expiredTime) {
-                        console.log('[Expiration] Sincronización data vencida');
-
-                        clear('persons');
-                        clear('vehicles');
-
-                        loadAll('persons');
-                        loadAll('vehicles');
-
-                        object.put({
-                            date: Date.now()
-                        });
-
-                    } else {
-                        $('.input-group').removeClass('hidden');
-                        $('.login-form').removeClass('hidden');
-                        $('.card-searcher').removeClass('hidden');
-                        $('.loader').addClass('hidden');
-                    }
-                }
-            }
-        };
-    }
-
-    /**
-     * Verifica si los objetos ya se encuentran cargados en el almacenamiento local
-     * @param  {string} type Tipo de objeto a verificar (persons, vehicles, users)
-     * @return void
-     */
-    function loadAll(type) {
-        var data = active.transaction([type], "readonly");
-        var object = data.objectStore(type);
-        var elements = [];
-        object.openCursor().onsuccess = function(e) {
-            var result = e.target.result;
-            if (result === null) {
-                return;
-            }
-            elements.push(result.value);
-            result.continue();
-        };
-        data.oncomplete = function() {
-            if (elements.length > 0) {
-                console.log('No hace falta sincronizar' + type);
-            } else {
-                console.log('Sincronizando ' + type);
-                app.firstSyncDownload(type);
-            }
-        };
-    }
-
-    /**
-     * Realiza el borrado de los datos del objeto dentro del almacenamiento local deseado
-     * @param  {string} type Objeto a borrar (persons, vehicles, users)
-     * @return void
-     */
-    function clear(type) {
-
-        var active = dataBase.result;
-        var data = active.transaction([type], "readwrite");
-        var object = data.objectStore(type);
-        object.clear();
-        data.oncomplete = function(event) {
-            console.log('Limpiando ' + type);
-        };
-    }
-
-    /**
-     * Almacenamiento de los vehiculos localmente
-     * @return void
-     */
-    app.saveVehicles = function() {
-        var data = active.transaction(["vehicles"], "readwrite");
-        var object = data.objectStore("vehicles");
-        var vehicles = JSON.parse(app.vehicles);
-
-        $.each(vehicles, function(key, vehicle) {
-            var request = object.put({
-                id: vehicle.id,
-                plate_number: vehicle.plate_number,
-                name: vehicle.name,
-                brand: vehicle.brand,
-                model: vehicle.model,
-                color: vehicle.color,
-                enable: vehicle.enable,
-                gps: vehicle.gps,
-                docs: vehicle.docs,
-                passengers: vehicle.passengers,
-                driver: vehicle.driver,
-            });
-            request.onerror = function(e) {
-                console.log(request.error.name + '\n\n' + request.error.message);
-            };
-            request.onsuccess = function(e) {}
         });
-
-        console.log('Saving data into localStorage Vehicles');
-    };
-
-    /**
-     * Almacenamiento de las personas localmente
-     * @return void
-     */
-    app.savePersons = function() {
-        var data = active.transaction(["persons"], "readwrite");
-        var object = data.objectStore("persons");
-        var persons = JSON.parse(app.persons);
-
-        $.each(persons, function(key, person) {
-            var request = object.put({
-                id: person.id,
-                dni: person.dni,
-                fullname: person.fullname,
-                enable: person.enable,
-                docs: person.docs,
-            });
-            request.onerror = function(e) {
-                console.log(request.error.name + '\n\n' + request.error.message);
-            };
-        });
-
-        console.log('Saving data into localStorage Persons');
-    };
-
-    /*****************************************************************************
-     *
-     * Methods Generales
-     *
-     ****************************************************************************/
-    /**
-     * Obtención de la fecha actual
-     * @return {string} Retorna fecha actual en formato dd/mm/yyyy:h:m:s
-     */
-    app.today = function() {
-        var d = new Date();
-        var month = d.getMonth() + 1;
-        var day = d.getDate();
-        var hour = d.getHours();
-        var minute = d.getMinutes();
-        var seconds = d.getSeconds();
-        var output = d.getFullYear() + '-' + (month < 10 ? '0' : '') + month + '-' + (day < 10 ? '0' : '') + day + ' ' + hour + ':' + minute + ':' + seconds;
-        return output;
     }
 
-    /**
-     * Obtención de la posición de estar disponible (latitud y longitud) desde donde se está usando a aplicación
-     * @return void
-     */
-    function getPosition(forceUpdate) {
-        if (navigator.geolocation) {
-
-            //si actualizo la posición por pedido del usuario
-            if (forceUpdate) {
-                disabledButtons(true);
-                showLoader('Obteniendo ubicación, por favor aguarde unos minutos ...')
-            }
-
-            var options = {
-                enableHighAccuracy: true,
-                timeout: 5 * 1000,
-                maximumAge: 5 * 60 * 1000
-            };
-
-            navigator.geolocation.getCurrentPosition(success, error, options);
-
-            function success(position) {
-                var coordenadas = position.coords;
-
-                console.log('Tu posición actual es:');
-                console.log('Latitud : ' + coordenadas.latitude);
-                console.log('Longitud: ' + coordenadas.longitude);
-                console.log('Más o menos ' + coordenadas.accuracy + ' metros.');
-
-                $('#hidden_lng').val(coordenadas.latitude);
-                $('#hidden_lat').val(coordenadas.longitude);
-
-                //si actualizo la posición por pedido del usuario
-                if (forceUpdate) {
-                    disabledButtons(false);
-                    hideLoader('Posición actualizada');
-                }
-
-            };
-
-            function error(error) {
-                console.warn('ERROR(' + error.code + '): ' + error.message);
-
-                $('#hidden_lng').val('');
-                $('#hidden_lat').val('');
-                $('#hidden_position').val('');
-
-                //si actualizo la posición por pedido del usuario
-                if (forceUpdate) {
-                    disabledButtons(false);
-                    hideLoader('Posición no actualizada');
-                }
-            }
-
-        } else {
-            console.log('[navigator.geolocation] false');
-        }
-    }
+    app.startDB();
 
 })();

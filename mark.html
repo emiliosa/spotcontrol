@@ -13,6 +13,9 @@
 
         <title>MAXTRACKER - Spot Control</title>
 
+        <!-- serviceworker -->
+        <link rel="canonical" id="canonical_link" href="">
+
         <!-- Favicon -->
         <link type="image/x-icon" rel="shortcut icon" href="favicon.png">
         <link type="image/x-icon" rel="icon" href="favicon.png">
@@ -21,12 +24,12 @@
         <link rel="manifest" href="/manifest.json">
 
         <!-- CSS -->
-        <link type="text/css" rel="stylesheet" href="assets/bootstrap/bootstrap.min.css?v=11540001">
+        <link type="text/css" rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">
         <link type="text/css" rel="stylesheet" href="assets/styles/font-awesome.min.css">
-        <link type="text/css" rel="stylesheet" href="assets/styles/gps-icon.css?v=11540001">
+        <link type="text/css" rel="stylesheet" href="assets/styles/gps-icon.css">
         <link type="text/css" rel="stylesheet" href="assets/styles/inline.css">
-        <link type="text/css" rel="stylesheet" href="assets/styles/mobile_main.css?v=11540001">
-        <link type="text/css" rel="stylesheet" href="assets/styles/theme/components-rounded.css?v=11540001">
+        <link type="text/css" rel="stylesheet" href="assets/styles/mobile_main.css">
+        <link type="text/css" rel="stylesheet" href="assets/styles/theme/components-rounded.css">
 
         <!-- Styles -->
         <style type="text/css">
@@ -62,11 +65,18 @@
                     <div class="card card-searcher hidden col-md-12">
                         <div class="row">
                             <div class="col-md-4"></div>
+                            <div class="col-md-4">
+                                <div class="alert alert-warning alert-low-quality-connection text-center hidden" role="alert"></div>
+                            </div>
+                            <div class="col-md-4"></div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4"></div>
                             <div class="formSearcher col-md-4">
                                 <div class="input-group margin-top-5 margin-bottom-5">
                                     <div class="input-icon left">
                                         <i class="fa fa-car"></i>
-                                        <input class="form-control" id="input_plate_number" placeholder="Dominio" style="text-transform:uppercase" type="text">
+                                        <input class="form-control" id="input_plate_number" placeholder="Dominio" style="text-transform:uppercase" type="search">
                                     </div>
                                     <span class="input-group-btn">
                                         <button class="btn blue" id="btn_search_vehicle" type="button">
@@ -77,7 +87,7 @@
                                 <div class="input-group margin-top-5 margin-bottom-5">
                                     <div class="input-icon left">
                                         <i class="fa fa-user"></i>
-                                        <input class="form-control" id="input_dni" placeholder="DNI" style="text-transform:uppercase" type="text">
+                                        <input class="form-control" id="input_dni" placeholder="DNI" style="text-transform:uppercase" type="search">
                                     </div>
                                     <span class="input-group-btn">
                                         <button class="btn blue" id="btn_search_person" type="button">
@@ -101,7 +111,7 @@
                                         <div class="loader-message text-center"></div>
                                     </div>
                                 </div>
-                                <div class="alert alert-warning hidden text-center" role="alert"></div>
+                                <div class="alert alert-message hidden text-center" role="alert"></div>
                             </div>
                             <div class="col-md-4"></div>
                         </div>
@@ -171,7 +181,7 @@
                         <div class="row">
                             <div class="col-md-4"></div>
                             <div class="col-md-4">
-                                <div class="input-group margin-top-5 margin-bottom-5" style="display: unset;">
+                                <div class="input-group hidden margin-top-5 margin-bottom-5" style="display: unset;">
                                     <input class="form-control" id="hidden_lat" type="hidden" value="">
                                     <input class="form-control" id="hidden_lng" type="hidden" value="">
                                     <input class="form-control" id="hidden_position" type="hidden">
@@ -202,15 +212,15 @@
                 </div>
             </div>
         </main>
-
-        <!-- Almacenamiento Local-->
-        <script src="assets/scripts/plugins/jquery-1.11.0.min.js?v=11540001"></script>
-        <script src="assets/scripts/plugins/jquery-ui/jquery-ui-1.10.3.custom.min.js?v=11540001" type="text/javascript"></script>
-        <script src="assets/scripts/plugins/bootstrap/bootstrap.min.js?v=11540001"></script>
-        <script src="assets/scripts/plugins/moment.js"></script>
-        <script src="assets/scripts/plugins/hmac-sha256.js"></script>
-        <script async="" src="scripts/conf.js"></script>
-        <script async="" src="scripts/app.js"></script>
     </body>
-
 </html>
+
+<script type="text/javascript" src="assets/scripts/plugins/jquery-1.11.0.min.js"></script>
+<script type="text/javascript" src="assets/scripts/plugins/jquery-ui/jquery-ui-1.10.3.custom.min.js" type="text/javascript"></script>
+<script type="text/javascript" src="assets/scripts/plugins/bootstrap/bootstrap.min.js"></script>
+<script type="text/javascript" src="assets/scripts/plugins/moment.js"></script>
+<script type="text/javascript" src="assets/scripts/plugins/hmac-sha256.js"></script>
+<script type="text/javascript" src="scripts/conf.js"></script>
+<script type="text/javascript" src="scripts/app.js"></script>
+<!-- <script type="text/javascript" src="scripts/functions.js"></script>
+<script type="text/javascript" src="scripts/events.js"></script> -->

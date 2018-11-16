@@ -2,7 +2,6 @@
 <html>
 
     <head>
-
         <meta charset="utf-8">
         <meta content="width=device-width, initial-scale=0.9" name="viewport">
 
@@ -14,6 +13,9 @@
 
         <title>MAXTRACKER - Spot Control</title>
 
+        <!-- serviceworker -->
+        <link rel="canonical" id="canonical_link" href="">
+
         <!-- Favicon -->
         <link type="image/x-icon" rel="shortcut icon" href="favicon.png">
         <link type="image/x-icon" rel="icon" href="favicon.png">
@@ -22,13 +24,13 @@
         <link rel="manifest" href="/manifest.json">
 
         <!-- CSS -->
-        <link type="text/css" rel="stylesheet" href="assets/bootstrap/bootstrap.min.css?v=11540001">
+        <link type="text/css" rel="stylesheet" href="assets/bootstrap/bootstrap.min.css">
         <link type="text/css" rel="stylesheet" href="assets/styles/font-awesome.min.css">
-        <link type="text/css" rel="stylesheet" href="assets/styles/gps-icon.css?v=11540001">
+        <link type="text/css" rel="stylesheet" href="assets/styles/gps-icon.css">
         <link type="text/css" rel="stylesheet" href="assets/styles/inline.css">
-        <link type="text/css" rel="stylesheet" href="assets/styles/mobile_main.css?v=11540001">
-        <link type="text/css" rel="stylesheet" href="assets/styles/theme/components-rounded.css?v=11540001">
-        <link type="text/css" rel="stylesheet" href="assets/styles/main.css?v=11540002">
+        <link type="text/css" rel="stylesheet" href="assets/styles/mobile_main.css">
+        <link type="text/css" rel="stylesheet" href="assets/styles/theme/components-rounded.css">
+        <link type="text/css" rel="stylesheet" href="assets/styles/main.css">
 
     </head>
     <body class="login">
@@ -41,7 +43,9 @@
 
         <div class="content">
 
-            <form class="login-form" id="form" action="" method="">
+            <div class="alert alert-warning alert-low-quality-connection text-center hidden" role="alert"></div>
+
+            <form class="login-form hidden" id="form" action="" method="">
                 <h3 class="form-title">Entrar a mi cuenta</h3>
 
                 <div class="form-group">
@@ -62,7 +66,7 @@
 
                 <div class="form-actions">
                     <button type="button" class="btn btn-koner" id="btnSubmit" name="btnSubmit">
-                        Entrar <i class="m-icon-swapright m-icon-white"></i>
+                        Entrar <i class=""></i>
                     </button>
                     O presione la tecla ENTER
                 </div>
@@ -86,13 +90,15 @@
     </body>
 </html>
 
-<!-- JS -->
-<script src="assets/scripts/plugins/jquery-1.11.0.min.js?v=11540001"></script>
-<script src="assets/scripts/plugins/jquery-ui/jquery-ui-1.10.3.custom.min.js?v=11540001" type="text/javascript"></script>
-<script src="assets/scripts/plugins/bootstrap/bootstrap.min.js?v=11540001"></script>
-<script src="assets/scripts/plugins/jquery-validation/js/jquery.validate.min.js?v=11540002"></script>
-<script src="assets/scripts/plugins/moment.js"></script>
-<script src="assets/scripts/plugins/hmac-sha256.js"></script>
-<script src="scripts/conf.js"></script>
-<script src="scripts/login.js"></script>
-<script src="scripts/app.js"></script>
+<script type="text/javascript" src="assets/scripts/plugins/jquery-1.11.0.min.js"></script>
+<script type="text/javascript" src="assets/scripts/plugins/jquery-ui/jquery-ui-1.10.3.custom.min.js"></script>
+<script type="text/javascript" src="assets/scripts/plugins/bootstrap/bootstrap.min.js"></script>
+<script type="text/javascript" src="assets/scripts/plugins/jquery-validation/js/jquery.validate.min.js"></script>
+<script type="text/javascript" src="assets/scripts/plugins/moment.js"></script>
+<script type="text/javascript" src="assets/scripts/plugins/hmac-sha256.js"></script>
+<script type="text/javascript" src="assets/scripts/plugins/hmac-sha256.js"></script>
+<script type="text/javascript" src="scripts/conf.js"></script>
+<script type="text/javascript" src="scripts/login.js"></script>
+<script type="text/javascript" src="scripts/app.js"></script>
+<!-- <script type="text/javascript" src="scripts/functions.js"></script>
+<script type="text/javascript" src="scripts/events.js"></script> -->
