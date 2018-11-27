@@ -138,33 +138,42 @@
                                                     <span class="label label-default enable_indicator bold"></span>
                                                 </h3>
                                             </div>
-                                            <table class="table table-light">
+                                            <table id="detail-table" class="table table-light">
                                                 <tbody>
-                                                    <tr>
+                                                    <tr class="wideTable">
                                                         <td class="bold"><span class="dniModel" style=""></span></td>
                                                         <td><span class="identifier" style=""></span></td>
-                                                        <td></td>
                                                     </tr>
-                                                    <tr>
+                                                    <tr class="narrowTable">
+                                                        <td colspan="2" class="bold"><span class="dniModel" style=""></span></td>
+                                                    </tr>
+                                                    <tr class="narrowTable">
+                                                        <td colspan="2"><span class="identifier" style=""></span></td>
+                                                    </tr>
+                                                    <tr class="wideTable">
                                                         <td class="bold"><span class="bold title-documents">Documentación:</span></td>
                                                         <td><span class="documents"></span></td>
                                                     </tr>
-                                                    <tr>
+                                                    <tr class="narrowTable">
+                                                        <td colspan="2" class="bold"><span class="bold title-documents">Documentación:</span></td>
+                                                    </tr>
+                                                    <tr class="narrowTable">
+                                                        <td colspan="2"><span class="documents"></span></td>
+                                                    </tr>
+                                                    <tr class="wideTable">
                                                         <td class="bold"><span class="bold title-gps">GPS:</span></td>
                                                         <td><span class="bold gps"></span></td>
                                                     </tr>
-                                                    <tr>
-                                                        <td class="bold">
-                                                            <span class="bold title-driver-name ">
-                                                                <img class="img-circle img-driver" src="" height="64" width="64">
-                                                            </span>
-                                                        </td>
-                                                        <td></td>
+                                                    <tr class="narrowTable">
+                                                        <td colspan="2"><span class="bold gps"></span></td>
                                                     </tr>
                                                     <tr>
-                                                        <td class="bold"><span class="bold passengersName">Pasajeros:</span></td>
-                                                        <td><span class="bold passengersDni">DNI: &nbsp;&nbsp;Habilitado:</span></td>
-                                                        <td><span class="bold passengersStatus"></span></td>
+                                                      <td colspan="2" class="bold"><span class="bold title-driver-name">Chofer:</span></td>
+                                                    </tr>
+                                                    <tr class="driver-detail">
+                                                    </tr>
+                                                    <tr>
+                                                        <td colspan="2" class="bold"><span class="bold passengersName">Pasajeros:</span></td>
                                                     </tr>
                                                 </tbody>
                                             </table>
@@ -218,6 +227,7 @@
 <script type="text/javascript" src="assets/scripts/plugins/jquery-1.11.0.min.js"></script>
 <script type="text/javascript" src="assets/scripts/plugins/jquery-ui/jquery-ui-1.10.3.custom.min.js" type="text/javascript"></script>
 <script type="text/javascript" src="assets/scripts/plugins/bootstrap/bootstrap.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/async/2.6.1/async.min.js"></script>
 <script type="text/javascript" src="assets/scripts/plugins/moment.js"></script>
 <script type="text/javascript" src="assets/scripts/plugins/hmac-sha256.js"></script>
 <script type="text/javascript" src="scripts/conf.js"></script>

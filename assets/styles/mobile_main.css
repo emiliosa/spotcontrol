@@ -117,3 +117,19 @@ filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fac695', end
 .width-full{
     width: 100%;
 }
+
+@media screen and (max-width: 600px) {
+    .wideTable {
+      display: none;
+    }
+}
+
+@media screen and (min-width: 600px) {
+    .narrowTable {
+        display: none;
+    }
+}
+
+.table {
+  width: 100% !important;
+}

@@ -1,0 +1,74 @@
+<?xml version='1.0' encoding='utf-8'?>
+<widget id="myPWABuilderApp.pwabuilder" version="0.0.1" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
+    <feature name="LocalStorage">
+        <param name="ios-package" value="CDVLocalStorage" />
+    </feature>
+    <feature name="HandleOpenUrl">
+        <param name="ios-package" value="CDVHandleOpenURL" />
+        <param name="onload" value="true" />
+    </feature>
+    <feature name="IntentAndNavigationFilter">
+        <param name="ios-package" value="CDVIntentAndNavigationFilter" />
+        <param name="onload" value="true" />
+    </feature>
+    <feature name="GestureHandler">
+        <param name="ios-package" value="CDVGestureHandler" />
+        <param name="onload" value="true" />
+    </feature>
+    <feature name="NetworkStatus">
+        <param name="ios-package" value="CDVConnection" />
+        <param name="onload" value="true" />
+    </feature>
+    <feature name="HostedWebApp">
+        <param name="ios-package" value="CDVHostedWebApp" />
+        <param name="onload" value="true" />
+    </feature>
+    <feature name="NetworkStatus">
+        <param name="ios-package" value="CDVConnection" />
+    </feature>
+    <name>SpotControl</name>
+    <description>
+        A sample Apache Cordova application that responds to the deviceready event.
+    </description>
+    <author email="dev@cordova.apache.org" href="http://cordova.io">
+        Apache Cordova Team
+    </author>
+    <content src="http://192.168.0.4:8080/index.html" />
+    <access origin="*" />
+    <allow-intent href="tel:*" />
+    <allow-intent href="sms:*" />
+    <allow-intent href="mailto:*" />
+    <allow-intent href="geo:*" />
+    <allow-navigation hap-rule="yes" href="http://192.168.0.4:8080/*" />
+    <allow-intent href="itms:*" />
+    <allow-intent href="itms-apps:*" />
+    <icon height="72" src="/assets/images/icons/android/mipmap-hdpi/ic_launcher.png" width="72" />
+    <icon height="144" src="/assets/images/icons/android/mipmap-xxhdpi/ic_launcher.png" width="144" />
+    <icon height="76" src="/assets/images/icons/ios/Icon-App-76x76@1x.png" width="76" />
+    <icon height="152" src="/assets/images/icons/ios/Icon-App-76x76@2x.png" width="152" />
+    <icon height="120" src="/assets/images/icons/ios/Icon-App-60x60@2x.png" width="120" />
+    <icon height="180" src="/assets/images/icons/ios/Icon-App-60x60@3x.png" width="180" />
+    <splash height="1334" src="/assets/images/icons/ios/Default-667h@2x.png" width="750" />
+    <splash height="960" src="/assets/images/icons/ios/Default@2x.png" width="640" />
+    <splash height="1242" src="/assets/images/icons/ios/Default-Landscape-736h@3x.png" width="2208" />
+    <splash height="2208" src="/assets/images/icons/ios/Default-Portrait-736h@3x.png" width="1242" />
+    <splash height="768" src="/assets/images/icons/ios/Default-Landscape.png" width="1024" />
+    <splash height="1024" src="/assets/images/icons/ios/Default-Portrait.png" width="768" />
+    <splash height="1536" src="/assets/images/icons/ios/Default-Landscape@2x.png" width="2048" />
+    <splash height="2048" src="/assets/images/icons/ios/Default-Portrait@2x.png" width="1536" />
+    <splash height="1136" src="/assets/images/icons/ios/Default@2x+.png" width="640" />
+    <preference name="AllowInlineMediaPlayback" value="false" />
+    <preference name="BackupWebStorage" value="cloud" />
+    <preference name="DisallowOverscroll" value="false" />
+    <preference name="EnableViewportScale" value="false" />
+    <preference name="KeyboardDisplayRequiresUserAction" value="true" />
+    <preference name="MediaPlaybackRequiresUserAction" value="false" />
+    <preference name="SuppressesIncrementalRendering" value="false" />
+    <preference name="SuppressesLongPressGesture" value="false" />
+    <preference name="Suppresses3DTouchGesture" value="false" />
+    <preference name="GapBetweenPages" value="0" />
+    <preference name="PageLength" value="0" />
+    <preference name="PaginationBreakingMode" value="page" />
+    <preference name="PaginationMode" value="unpaginated" />
+    <preference name="Fullscreen" value="false" />
+</widget>

@@ -1,35 +1,35 @@
-html, body, 
-body#Controller_Cartography .page-container, 
+html, body,
+body#Controller_Cartography .page-container,
 body#Controller_Cartography .page-content-wrapper,
 body#Controller_Cartography .page-content,
-body#Controller_History .page-container, 
+body#Controller_History .page-container,
 body#Controller_History .page-content-wrapper,
 body#Controller_History .page-content,
-body#Controller_Monitor .page-container, 
+body#Controller_Monitor .page-container,
 body#Controller_Monitor .page-content-wrapper,
 body#Controller_Monitor .page-content,
-body#Controller_Zonecontrol .page-container, 
+body#Controller_Zonecontrol .page-container,
 body#Controller_Zonecontrol .page-content-wrapper,
 body#Controller_Zonecontrol .page-content,
-/*body#Controller_Online_Zonecontrol .page-container, 
+/*body#Controller_Online_Zonecontrol .page-container,
 body#Controller_Online_Zonecontrol .page-content-wrapper,
 body#Controller_Online_Zonecontrol .page-content,*/
-body#Controller_Activity_Resume .page-container, 
+body#Controller_Activity_Resume .page-container,
 body#Controller_Activity_Resume .page-content-wrapper,
 body#Controller_Activity_Resume .page-content,
-/*body#Controller_Infraction .page-container, 
+/*body#Controller_Infraction .page-container,
 body#Controller_Infraction .page-content-wrapper,
 body#Controller_Infraction .page-content,*/
-body#Controller_Old_Infraction .page-container, 
+body#Controller_Old_Infraction .page-container,
 body#Controller_Old_Infraction .page-content-wrapper,
 body#Controller_Old_Infraction .page-content,
-body#Controller_Roundcontrol .page-container, 
+body#Controller_Roundcontrol .page-container,
 body#Controller_Roundcontrol .page-content-wrapper,
 body#Controller_Roundcontrol .page-content,
-body#Controller_Maxentry .page-container, 
+body#Controller_Maxentry .page-container,
 body#Controller_Maxentry .page-content-wrapper,
 body#Controller_Maxentry .page-content,
-body#Controller_Event_Finder .page-container, 
+body#Controller_Event_Finder .page-container,
 body#Controller_Event_Finder .page-content-wrapper,
 body#Controller_Event_Finder .page-content,
 body#Controller_Alarm2 .page-container,
@@ -47,25 +47,25 @@ body#Controller_Ypf .page-content,
 body#Controller_Ssma .page-container,
 body#Controller_Ssma .page-content-wrapper,
 body#Controller_Ssma .page-content,
-body#Controller_Device_Command .page-container, 
+body#Controller_Device_Command .page-container,
 body#Controller_Device_Command .page-content-wrapper,
 body#Controller_Device_Command .page-content,
-body#Controller_Fleet_Management .page-container, 
+body#Controller_Fleet_Management .page-container,
 body#Controller_Fleet_Management .page-content-wrapper,
 body#Controller_Fleet_Management .page-content,
-body#Controller_State .page-container, 
+body#Controller_State .page-container,
 body#Controller_State .page-content-wrapper,
 body#Controller_State .page-content,
-body#Controller_Person_State .page-container, 
+body#Controller_Person_State .page-container,
 body#Controller_Person_State .page-content-wrapper,
 body#Controller_Person_State .page-content
-/*body#Controller_Fleet .page-container, 
+/*body#Controller_Fleet .page-container,
 body#Controller_Fleet .page-content-wrapper,
 body#Controller_Fleet .page-content,
-body#Controller_Vehicle .page-container, 
+body#Controller_Vehicle .page-container,
 body#Controller_Vehicle .page-content-wrapper,
 body#Controller_Vehicle .page-content,
-body#Controller_Person .page-container, 
+body#Controller_Person .page-container,
 body#Controller_Person .page-content-wrapper,
 body#Controller_Person .page-content
 */
@@ -96,8 +96,8 @@ body#Controller_Device_Command .ui-layout-center
     margin-top: 0;
 }
 
-body#Controller_Cartography > .container, 
-body#Controller_Cartography > .container > div.clearfix, 
+body#Controller_Cartography > .container,
+body#Controller_Cartography > .container > div.clearfix,
 .beta {
     position: absolute;
     top: 0;
@@ -384,13 +384,13 @@ div.DTED_Lightbox_Wrapper {
 .center-text {
     text-align: center;
 }
-.overflow { 
-    overflow:visible !important; 
+.overflow {
+    overflow:visible !important;
 }
-.float-right { 
+.float-right {
     float: right
 }
-.float-left { 
+.float-left {
     float: left
 }
 
@@ -415,8 +415,8 @@ div[id*="-tree-container"] {
     padding: 10px 5px;
 
     -webkit-border-radius: 4px;
-    -moz-border-radius: 4px; 
-    border-radius: 4px; 
+    -moz-border-radius: 4px;
+    border-radius: 4px;
 }
 div[id*="-tree-container"].tree-container-mini {
     height: 280px;
@@ -444,7 +444,7 @@ div[id*="-tree-container"].tree-container-bordered {
 #layers-tree .jstree-closed > .jstree-anchor > .jstree-checkbox { display:none; }
 
 #collapse-vehiculos {
-    overflow-y:auto; 
+    overflow-y:auto;
 }
 
 #show_download,
@@ -505,8 +505,8 @@ div[id*="-tree-container"].tree-container-bordered {
     padding: 10px 5px;
 
     -webkit-border-radius: 4px;
-    -moz-border-radius: 4px; 
-    border-radius: 4px; 
+    -moz-border-radius: 4px;
+    border-radius: 4px;
 }
 #sidebar .nav.nav-stacked {
     background: #fff;
@@ -556,7 +556,7 @@ div[id*="-tree-container"].tree-container-bordered {
 .color-cube {
     float: right;
     min-width: 10px;
-    min-height: 15px; 
+    min-height: 15px;
 }
 
 /*.color-figure {
@@ -666,7 +666,7 @@ td span.red {
     text-align: center;
 }
 
-#history-summary-results tr, #history-summary-results td, #history-summary-results th, 
+#history-summary-results tr, #history-summary-results td, #history-summary-results th,
 #monitor-results tr, #monitor-results td, #monitor-results th,
 #zonecontrol-results tr, #zonecontrol-results td, #zonecontrol-results th{
     white-space: nowrap;
@@ -833,7 +833,7 @@ ui-layout-resizer {
 }
 
 .leaflet-playback-icon {
- z-index: 999;   
+ z-index: 999;
 }
 
 /** LOGIN **/
@@ -1363,7 +1363,7 @@ ui-layout-resizer {
     margin: 3px 0 6px 0;
 }
 .vertical-text {
-    -webkit-transform: rotate(270deg);	
+    -webkit-transform: rotate(270deg);
     -moz-transform: rotate(270deg);
     -ms-transform: rotate(270deg);
     -o-transform: rotate(270deg);
@@ -1465,47 +1465,47 @@ p.checklist-align-right {
     /*background-color: #F47D31*/
 }
 /*Koner Orange Button by http://blog.koalite.com/bbg/*/
-.koner-button { 
-    color: #ffffff; 
-    background-color: #F47D31; 
-    border-color: #F47D31; 
-} 
+.koner-button {
+    color: #ffffff;
+    background-color: #F47D31;
+    border-color: #F47D31;
+}
 
-.koner-button:hover, 
-.koner-button:focus, 
-.koner-button:active, 
-.koner-button.active, 
-.open .dropdown-toggle.koner-button { 
-    color: #ffffff; 
-    background-color: #E87612; 
-    border-color: #F47D31; 
-} 
-.koner-button:active, 
-.koner-button.active, 
-.open .dropdown-toggle.koner-button { 
-    background-image: none; 
-} 
-.koner-button.disabled, 
-.koner-button[disabled], 
-fieldset[disabled] .koner-button, 
-.koner-button.disabled:hover, 
-.koner-button[disabled]:hover, 
-fieldset[disabled] .koner-button:hover, 
-.koner-button.disabled:focus, 
-.koner-button[disabled]:focus, 
-fieldset[disabled] .koner-button:focus, 
-.koner-button.disabled:active, 
-.koner-button[disabled]:active, 
-fieldset[disabled] .koner-button:active, 
-.koner-button.disabled.active, 
-.koner-button[disabled].active, 
-fieldset[disabled] .koner-button.active { 
-    background-color: #F47D31; 
-    border-color: #F47D31; 
-} 
-.koner-button .badge { 
-    color: #F47D31; 
-    background-color: #ffffff; 
+.koner-button:hover,
+.koner-button:focus,
+.koner-button:active,
+.koner-button.active,
+.open .dropdown-toggle.koner-button {
+    color: #ffffff;
+    background-color: #E87612;
+    border-color: #F47D31;
+}
+.koner-button:active,
+.koner-button.active,
+.open .dropdown-toggle.koner-button {
+    background-image: none;
+}
+.koner-button.disabled,
+.koner-button[disabled],
+fieldset[disabled] .koner-button,
+.koner-button.disabled:hover,
+.koner-button[disabled]:hover,
+fieldset[disabled] .koner-button:hover,
+.koner-button.disabled:focus,
+.koner-button[disabled]:focus,
+fieldset[disabled] .koner-button:focus,
+.koner-button.disabled:active,
+.koner-button[disabled]:active,
+fieldset[disabled] .koner-button:active,
+.koner-button.disabled.active,
+.koner-button[disabled].active,
+fieldset[disabled] .koner-button.active {
+    background-color: #F47D31;
+    border-color: #F47D31;
+}
+.koner-button .badge {
+    color: #F47D31;
+    background-color: #ffffff;
 }
 /*END Koner Orange Button*/
 .fa-signal {
@@ -1516,10 +1516,10 @@ fieldset[disabled] .koner-button.active {
 }
 
 .custody-signal {
-    display: inline-block; 
-    width: 34px; 
-    height: 34px; 
-    overflow: hidden; 
+    display: inline-block;
+    width: 34px;
+    height: 34px;
+    overflow: hidden;
     margin-top: 5px;
     margin-bottom: 5px
 }
@@ -1555,9 +1555,9 @@ fieldset[disabled] .koner-button.active {
 }
 
 .cartography-form {
-    background-color: #FFFFFF; 
+    background-color: #FFFFFF;
     margin-top: 10px;
-    border-radius: 3px; 
+    border-radius: 3px;
     padding: 5px 5px 1px 5px;
 }
 
@@ -1595,7 +1595,7 @@ fieldset[disabled] .koner-button.active {
         /*size: landscape;*/
         margin: 0 !important;
     }
-    
+
     table{
         float: left;
         table-layout: fixed !important;
@@ -1606,37 +1606,37 @@ fieldset[disabled] .koner-button.active {
         overflow: hidden !important;
         width: 1px !important;
     }
-    
+
     #logo {
         display: block !important;
     }
-    
+
     .print-receipt {
          display: inline-block;
          padding-left: 50px;
          font-size: 10px;
     }
-    
+
     .print-receipt-inf {
          display: inline-block;
          padding-left: 100px;
          font-size: 10px;
     }
-    
+
     .print-receipt-inf-low {
          display: inline-block;
          padding-left: 90px;
          font-size: 10px;
     }
-    
+
     .print-receipt-date{
         font-size: 10px;
     }
-    
+
     .print-receipt-map{
         padding-left: 25px;
     }
-    
+
     .print-receipt-body{
         width: 650px !important;
     }
@@ -1651,17 +1651,17 @@ fieldset[disabled] .koner-button.active {
     .header-logo-title {
         /*display: none !important;*/
     }
-    
+
     .menu-toggler.responsive-toggler {
 
     }
-    
+
     .dropdown-toggle.bg-blue {
         position: relative !important;
         right: 0 !important;
-        
+
     }
-    
+
     #search-form {
         width: 80% !important;
     }

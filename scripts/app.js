@@ -26,7 +26,21 @@
     };
     var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
     var dataBase = null;
-
+    function isOnline(yes, no){
+        var xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHttp');
+        xhr.onload = function(){
+            if(yes instanceof Function){
+                yes();
+            }
+        }
+        xhr.onerror = function(){
+            if(no instanceof Function){
+                no();
+            }
+        }
+        xhr.open("HEAD",SPOTCONTROL.API,true);
+        xhr.send();
+      }
     /**
      * Creación del almacén de objetos (DB)
      *
@@ -35,7 +49,6 @@
     app.startDB = function() {
         dataBase = indexedDB.open("spotcontrol", 1);
         dataBase.onupgradeneeded = function(e) {
-
             //Tabla Personas
             var object = dataBase.result.createObjectStore("persons", {
                 keyPath: 'id',
@@ -85,18 +98,20 @@
         };
         dataBase.onsuccess = function(e) {
             console.log('[spotcontrol] Base de Datos Creada');
-            if (navigator.onLine) {
+            isOnline(
+              function() {
                 app.checkExpiration(false);
-            } else {
+              },
+              function() {
                 $('.card-searcher').removeClass('hidden');
                 $('.login-form').removeClass('hidden');
                 $('.input-group').removeClass('hidden');
                 $('.loader').addClass('hidden');
-            }
+              }
+            );
             getPosition(false);
             app.checkUser();
             checkConnectionStatus();
-
         };
         dataBase.onerror = function(e) {
             console.log('[Error] Creación de la DB');
@@ -113,8 +128,9 @@
     app.login = function() {
         var username = $('#username').val();
         var password = $('#password').val();
-        //Logueo Online
-        if (navigator.onLine) {
+        isOnline(
+          function() {
+            //Logueo Online
             $.ajax({
                 url: SPOTCONTROL.API + "login",
                 type: "GET",
@@ -137,8 +153,9 @@
             }).always(function(jqXHR, textStatus, errorThrown) {
 
             });
-        //Logueo Offline
-        } else {
+          },
+          function() {
+            //Logueo Offline
             var token = CryptoJS.HmacSHA256(username + password, SPOTCONTROL.keyPhrase).toString();
             var data = dataBase.result.transaction(["users"], "readonly");
             var object = data.objectStore("users");
@@ -153,12 +170,13 @@
                     $('#result').html("<div class='alert alert-danger'>Correo electrónico y/o contraseña incorrectos</div>");
                 }
             };
-            
+
             request.onerror = function(e) {
                 console.log('[Error] login offline: ' + request.error.name + '\n\n' + request.error.message);
                 hideLoader('Ha ocurrido un error en el intento de login', 'alert-danger');
             };
-        }
+          }
+        );
     };
 
     /**
@@ -167,19 +185,19 @@
      * @return void
      */
     app.logout = function() {
-        var userId = $('#hidden_user_id').val();
         var data = dataBase.result.transaction(["users"], "readwrite");
         var object = data.objectStore("users");
-        var request = object.get(userId);
+        var index = object.index("by_logged");
+        var request = index.get('1');
 
         request.onsuccess = function(e) {
             var result = e.target.result;
-            if (result.logged) {
+            if (result.logged === '1') {
                 var request = object.put({
                     id: result.id,
                     username: result.username,
                     token: result.token,
-                    logged: false,
+                    logged: '0',
                     loginTime: result.loginTime,
                 });
                 request.onerror = function(e) {
@@ -213,20 +231,21 @@
             'type':         $('#hidden_type').val()
         }];
 
-        if (navigator.onLine) {
+        isOnline(
+          function() {
             var msg = '';
             var msgType = '';
-            
+
             var data = dataBase.result.transaction(["users"], "readonly");
             var object = data.objectStore("users");
             var index = object.index("by_logged");
-            var request = index.get("true");
-            
+            var request = index.get('1');
+
             request.onsuccess = function() {
                 var result = request.result;
-                
+
                 if (typeof result !== "undefined") {
-                    
+
                     $.ajax({
                         url: SPOTCONTROL.API + "upload",
                         type: "GET",
@@ -234,8 +253,8 @@
                         data: {
                             'elements': elements
                         },
-                        beforeSend: function() {
-                            request.setRequestHeader('jwt', result.jwt);
+                        beforeSend: function(xhr) {
+                            xhr.setRequestHeader('jwt', result.jwt);
                             checkConnectionStatus();
                             showLoader('Guardando los datos, por favor aguarde unos minutos')
                         }
@@ -256,25 +275,25 @@
                     }).always(function(jqXHR, textStatus, errorThrown) {
                         hideLoader(msg, msgType);
                     });
-                    
+
                 } else {
                     msg = 'Hubo un error al guardar los datos';
                     msgType = 'alert-danger';
-                    
+
                     console.log("[uploadData] Error al realizar upload");
                     noResult(msg, msgType, false, '');
                 }
             };
-            
+
             request.onerror = function() {
                 msg = 'Hubo un error al guardar los datos';
                 msgType = 'alert-danger';
-                
+
                 console.log("[uploadData] Error al realizar upload");
                 noResult(msg, msgType, false, '');
             };
-                
-        } else {
+          },
+          function() {
             var data = dataBase.result.transaction(["spotcontrol_details"], "readwrite");
             var object = data.objectStore("spotcontrol_details");
             var request = object.put(element[0]);
@@ -294,9 +313,9 @@
                 console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
                 noResult(msg, msgType, false, '');
             };
-        }
+          }
+        );
     };
-
 
     /**
      * Búsqueda individual de los vehículos, primero busca en cache, si existe lo muestra, sino verifica que haya conexión y consulta a la API
@@ -316,68 +335,64 @@
             if (typeof result !== "undefined") {
                 showVehicleList(elements);
             } else {
-                if (navigator.onLine) {
-                    
-                    var data = dataBase.result.transaction(["users"], "readonly");
-                    var object = data.objectStore("users");
-                    var index = object.index("by_logged");
-                    var request = index.get("true");
-                    
-                    request.onsuccess = function() {
-                        var result = request.result;
-                        
-                        if (typeof result !== "undefined") {
-                            
-                            $.ajax({
-                                url: SPOTCONTROL.API + "vehicleByPlateNumber",
-                                type: "GET",
-                                dataType: 'json',
-                                data: {
-                                    'plate_number': plate_number
-                                },
-                                beforeSend: function() {
-                                    request.setRequestHeader('jwt', result.jwt);
-                                    checkConnectionStatus();
-                                    showLoader('Buscando el vehiculo ingresado, por favor aguarde unos minutos')
-                                }
-                            }).done(function(response) {
-                                hideLoader('', 'hidden', false);
+              isOnline(
+                function() {
+                  var data = dataBase.result.transaction(["users"], "readonly");
+                  var object = data.objectStore("users");
+                  var index = object.index("by_logged");
+                  var request = index.get('1');
+                  request.onsuccess = function() {
+                      var result = request.result;
+                      if (typeof result !== "undefined") {
+                          $.ajax({
+                              url: SPOTCONTROL.API + "vehicleByPlateNumber",
+                              type: "GET",
+                              dataType: 'json',
+                              data: {
+                                  'plate_number': plate_number
+                              },
+                              beforeSend: function(xhr) {
+                                  xhr.setRequestHeader('jwt', result.jwt);
+                                  checkConnectionStatus();
+                                  showLoader('Buscando el vehiculo ingresado, por favor aguarde unos minutos')
+                              }
+                          }).done(function(response) {
+                              hideLoader('', 'hidden', false);
 
-                                if (response) {
-                                    showVehicleList(response);
-                                    console.log('[findVehicle] AJAX vehículo encontrado');
-                                } else {
-                                    console.log('[findVehicle] AJAX vehículo NO encontrado');
-                                    noResult('No encontramos el vehículo que busca', 'alert-warning', true, 'vehicle');
-                                }
-                            }).fail(function(jqXHR, textStatus, errorThrown) {
-                                hideLoader('', 'hidden', false);
-                                console.log('[Error] AJAX findVehicle: ' + textStatus);
-                                noResult('No encontramos el vehículo que busca', 'alert-warning', true, 'vehicle');
-                            }).always(function(jqXHR, textStatus, errorThrown) {
-                                $('.card-marker').removeClass('hidden');
-                            });
-                        } else {
-                            var msg = 'Hubo un error al buscar los datos solicitados';
-                            var msgType = 'alert-danger';
-                            
-                            console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
-                            noResult(msg, msgType, true, 'vehicle');
-                        }
-                    };
-                    
-                    request.onerror = function() {
-                        var msg = 'Hubo un error al buscar los datos solicitados';
-                        var msgType = 'alert-danger';
-                        
-                        console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
-                        noResult(msg, msgType, true, 'vehicle');
-                    };
-                    
-                } else {
-                    console.log('[findVehicle] offline');
-                    noResult('No encontramos el vehículo que busca', 'alert-warning', true, 'vehicle');
+                              if (response) {
+                                  showVehicleList(response);
+                                  console.log('[findVehicle] AJAX vehículo encontrado');
+                              } else {
+                                  console.log('[findVehicle] AJAX vehículo NO encontrado');
+                                  noResult('No encontramos el vehículo que busca', 'alert-warning', true, 'vehicle');
+                              }
+                          }).fail(function(jqXHR, textStatus, errorThrown) {
+                              hideLoader('', 'hidden', false);
+                              console.log('[Error] AJAX findVehicle: ' + textStatus);
+                              noResult('No encontramos el vehículo que busca', 'alert-warning', true, 'vehicle');
+                          }).always(function(jqXHR, textStatus, errorThrown) {
+                              $('.card-marker').removeClass('hidden');
+                          });
+                      } else {
+                          var msg = 'Hubo un error al buscar los datos solicitados';
+                          var msgType = 'alert-danger';
+                          // console.log('[Error] spotcontrol_details: ' + data.error.message);
+                          noResult(msg, msgType, true, 'vehicle');
+                      }
+                  };
+                  request.onerror = function(err) {
+                      var msg = 'Hubo un error al buscar los datos solicitados';
+                      var msgType = 'alert-danger';
+
+                      console.log('[Error] spotcontrol_details: ' + err.message);
+                      noResult(msg, msgType, true, 'vehicle');
+                  };
+                },
+                function() {
+                  console.log('[findVehicle] offline');
+                  noResult('No encontramos el vehículo que busca', 'alert-warning', true, 'vehicle');
                 }
+              );
             }
         };
     };
@@ -400,70 +415,71 @@
             if (typeof result !== "undefined") {
                 showPersonList(elements);
             } else {
-                if (navigator.onLine) {
-                    
-                    var data = dataBase.result.transaction(["users"], "readonly");
-                    var object = data.objectStore("users");
-                    var index = object.index("by_logged");
-                    var request = index.get("true");
-                    
-                    request.onsuccess = function() {
-                        var result = request.result;
-                        
-                        if (typeof result !== "undefined") {
-                            
-                            $.ajax({
-                                url: SPOTCONTROL.API + "personByDni",
-                                type: "GET",
-                                dataType: 'json',
-                                data: {
-                                    'dni': dni
-                                },
-                                beforeSend: function() {
-                                    request.setRequestHeader('jwt', result.jwt);
-                                    checkConnectionStatus();
-                                    showLoader('Buscando la persona ingresada, por favor aguarde unos minutos')
-                                }
-                            }).done(function(response) {
-                                var person = JSON.parse(JSON.stringify(response));
+              isOnline(
+                function() {
+                  var data = dataBase.result.transaction(["users"], "readonly");
+                  var object = data.objectStore("users");
+                  var index = object.index("by_logged");
+                  var request = index.get('1');
 
-                                hideLoader('', 'hidden', false);
+                  request.onsuccess = function() {
+                      var result = request.result;
 
-                                if (person !== false) {
-                                    showPersonList(person);
-                                    console.log('[findPerson] AJAX persona encontrada');
-                                } else {
-                                    console.log('[findPerson] AJAX persona NO encontrada');
-                                    noResult('No encontramos la persona que busca', 'alert-warning', true, 'person');
-                                }
-                            }).fail(function(jqXHR, textStatus, errorThrown) {
-                                hideLoader('', 'hidden', false);
-                                console.log('[Error] AJAX findPerson: ' + textStatus);
-                                noResult('No encontramos la persona que busca', 'alert-warning', true, 'person');
-                            }).always(function(jqXHR, textStatus, errorThrown) {
-                                $('.card-marker').removeClass('hidden');
-                            });
-                        } else {
-                            var msg = 'Hubo un error al buscar los datos solicitados';
-                            var msgType = 'alert-danger';
-                            
-                            console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
-                            noResult(msg, msgType, true, 'person');
-                        }
-                    };
-                    
-                    request.onerror = function() {
-                        var msg = 'Hubo un error al buscar los datos solicitados';
-                        var msgType = 'alert-danger';
-                        
-                        console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
-                        noResult(msg, msgType, true, 'person');
-                    };
-                        
-                } else {
-                    console.log("[findPerson] offline");
-                    noResult('No encontramos la persona que busca', 'alert-warning', true, 'person');
+                      if (typeof result !== "undefined") {
+
+                          $.ajax({
+                              url: SPOTCONTROL.API + "personByDni",
+                              type: "GET",
+                              dataType: 'json',
+                              data: {
+                                  'dni': dni
+                              },
+                              beforeSend: function(xhr) {
+                                  xhr.setRequestHeader('jwt', result.jwt);
+                                  checkConnectionStatus();
+                                  showLoader('Buscando la persona ingresada, por favor aguarde unos minutos')
+                              }
+                          }).done(function(response) {
+                              var person = JSON.parse(JSON.stringify(response));
+
+                              hideLoader('', 'hidden', false);
+
+                              if (person !== false) {
+                                  showPersonList(person);
+                                  console.log('[findPerson] AJAX persona encontrada');
+                              } else {
+                                  console.log('[findPerson] AJAX persona NO encontrada');
+                                  noResult('No encontramos la persona que busca', 'alert-warning', true, 'person');
+                              }
+                          }).fail(function(jqXHR, textStatus, errorThrown) {
+                              hideLoader('', 'hidden', false);
+                              console.log('[Error] AJAX findPerson: ' + textStatus);
+                              noResult('No encontramos la persona que busca', 'alert-warning', true, 'person');
+                          }).always(function(jqXHR, textStatus, errorThrown) {
+                              $('.card-marker').removeClass('hidden');
+                          });
+                      } else {
+                          var msg = 'Hubo un error al buscar los datos solicitados';
+                          var msgType = 'alert-danger';
+
+                          console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
+                          noResult(msg, msgType, true, 'person');
+                      }
+                  };
+
+                  request.onerror = function() {
+                      var msg = 'Hubo un error al buscar los datos solicitados';
+                      var msgType = 'alert-danger';
+
+                      console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
+                      noResult(msg, msgType, true, 'person');
+                  };
+                },
+                function() {
+                  console.log("[findPerson] offline");
+                  noResult('No encontramos la persona que busca', 'alert-warning', true, 'person');
                 }
+              );
             }
         };
     };
@@ -483,7 +499,7 @@
                 username: result.username,
                 token: result.token,
                 jwt: result.jwt,
-                logged: true,
+                logged: '1',
                 loginTime: Date.now(),
             });
             request.onerror = function(e) {
@@ -512,7 +528,7 @@
         cursor.onsuccess = function(e) {
             var result = e.target.result;
             var url;
-            if (result === null || !result.value.logged) {
+            if (result === null || result.value.logged !== '1') {
                 console.log('Usuario No Logueado');
                 url = SPOTCONTROL.domain + 'index.html';
                 if (window.location != url) {
@@ -530,7 +546,7 @@
                     if (window.location != url) {
                         redirect(url, "Su sesión ha vencido, redireccionando");
                     }
-                } else if(result.value.logged) {
+                } else if(result.value.logged !== '0') {
                     url = SPOTCONTROL.domain + 'mark.html';
                     if (window.location != url) {
                         $('.login-form').html("Usted ya ha iniciado sesión, redireccionando");
@@ -552,10 +568,8 @@
         var data = dataBase.result.transaction(['expiration'], 'readonly');
         var object = data.objectStore('expiration');
         var cursor = object.openCursor();
-
         cursor.onsuccess = function(e) {
             var result = e.target.result;
-
             // si la base local está vacía, invoco a la API
             if (result === null) {
                 console.log('[Expiration] Sin datos');
@@ -563,7 +577,6 @@
                 app.syncAllData();
 
             } else {
-
                 //si el usuario fuerza la actualización de datos, invoco a la API
                 if (forceUpdate) {
                     app.clear('persons');
@@ -595,114 +608,162 @@
     };
 
     /**
-     * Obtiene datos de la API
-     *
-     * @param string type
-     * @return Promise
-     */
-    app.loadDataFromAPI = function(type) {
-        var data = dataBase.result.transaction(["users"], "readonly");
-        var object = data.objectStore("users");
+    * Obtiene datos de la API
+    *
+    * @param string type
+    * @return Promise
+    */
+    app.loadDataFromAPI = function(type, cb) {
+        console.log('type:',type);
+        var _callback = cb;
+        var object = dataBase.result.transaction(["users"], "readonly").objectStore("users");
         var index = object.index("by_logged");
-        var request = index.get("true");
+        var request = index.get('1');
 
         request.onsuccess = function() {
             var result = request.result;
-            
+
             if (typeof result !== "undefined") {
-                
-                return 
-                    $.ajax({
-                        url: SPOTCONTROL.API + type,
-                        type: "GET",
-                        dataType: 'json',
-                        data: type,
-                        timeout: 30 * 60 * 1000,
-                        beforeSend: function(request) {
-                            request.setRequestHeader('jwt', result.jwt);
-                            checkConnectionStatus();
-                            showLoader('Actualizando los datos, por favor aguarde unos minutos')
-                        }
-                    }).done(function(response) {
-                        var values = JSON.stringify(response);
-
-                        switch (type) {
-                            case 'vehicles':
-                                app.vehicles = values;
-                                app.saveVehicles();
-                                break;
-                            case 'persons':
-                                app.persons = values;
-                                app.savePersons();
-                                break;
-                        }
-                        console.log('[firstSyncDownload] (' + type + '): Getting data from WS');
-                    }).fail(function(jqXHR, textStatus, errorThrown) {
-                        console.log('[Error] AJAX firstSyncDownload: ' + textStatus);
-                    }).always(function(jqXHR, textStatus, errorThrown) {});
+              $.ajax({
+                  url: SPOTCONTROL.API + type,
+                  type: "GET",
+                  dataType: 'json',
+                  data: type,
+                  timeout: 30 * 60 * 1000,
+                  beforeSend: function(xhr) {
+                      xhr.setRequestHeader('jwt', result.jwt);
+                      checkConnectionStatus();
+                      showLoader('Actualizando los datos, por favor aguarde unos minutos')
+                  }
+              }).then(
+                app.successCallback.bind(null, {type: type, cb: _callback}),
+                app.errorCallback.bind(null, {cb: _callback})
+              );
             } else {
-                console.log("[loadDataFromAPI] Error al obtener datos del usuario");
+              console.log("[loadDataFromAPI] Error al obtener datos del usuario");
+              return _callback(new Error("[loadDataFromAPI] Error al obtener datos del usuario"));
             }
-        };
-        
-        request.onerror = function() {
-            console.log("[loadDataFromAPI] Error al obtener datos del usuario");
+            return null;
         };
 
+        request.onerror = function(err) {
+            console.log("[loadDataFromAPI] Error al obtener datos del usuario");
+            return _callback(new Error("[loadDataFromAPI] Error al obtener datos del usuario"));
+        };
     };
+
+    /**
+    * Atiende la recuperación exitosa de datos
+    *
+    * @param object payload
+    * @param object result
+    * @return Callback
+    */
+    app.successCallback = function (payload, result) {
+      var values = JSON.stringify(result);
+      switch (payload.type) {
+          case 'vehicles':
+              app.vehicles = values;
+              app.saveVehicles();
+              break;
+          case 'persons':
+              app.persons = values;
+              app.savePersons();
+              break;
+      }
+      console.log('[firstSyncDownload] (' + payload.type + '): Getting data from WS');
+      return payload.cb(null,null);
+    }
+
+    /**
+    * Atiende los errores de recuperación de datos
+    *
+    * @param object payload
+    * @param object result
+    * @return Callback
+    */
+    app.errorCallback = function (payload, result) {
+      console.log('[Error] AJAX firstSyncDownload: ' + result.message);
+      return payload.cb(result,null);
+    }
 
     /**
      * Sube las marcas realizadas en modo offline
      *
      * @param string elements
-     * @return Promise
+     * @param function cb
+     * @return Callback
      */
-    app.uploadData = function(elements) {
+    app.uploadData = function(elements, cb) {
+        var _callback = cb;
         var data = dataBase.result.transaction(["users"], "readonly");
         var object = data.objectStore("users");
         var index = object.index("by_logged");
-        var request = index.get("true");
-        
+        var request = index.get('1');
+
         request.onsuccess = function() {
             var result = request.result;
-            
+
             if (typeof result !== "undefined") {
-
-                return 
-                    $.ajax({
-                        url: SPOTCONTROL.API + "upload",
-                        type: "POST",
-                        dataType: 'json',
-                        data: {
-                            'elements': elements,
-                        },
-                        beforeSend: function(request) {
-                            request.setRequestHeader('jwt', result.jwt);
-                            checkConnectionStatus();
-                            showLoader('Actualizando los datos, por favor aguarde unos minutos')
-                        }
-                    }).done(function(response) {
-                        if (response) {
-                            var data = dataBase.result.transaction(['spotcontrol_details'], 'readwrite');
-                            var object = data.objectStore('spotcontrol_details');
-
-                            object.clear();
-                            console.log('[syncUpload] AJAX syncUpload exitoso');
-                        } else {
-                            console.log('[syncUpload] AJAX syncUpload failed from WS');
-                        }
-                    }).fail(function(jqXHR, textStatus, errorThrown) {
-                        console.log('[Error] AJAXtermi syncUpload: ', textStatus);
-                    }).always(function(jqXHR, textStatus, errorThrown) {});
+              $.ajax({
+                url: SPOTCONTROL.API + "upload",
+                type: "POST",
+                dataType: 'json',
+                data: {
+                    'elements': elements,
+                },
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader('jwt', result.jwt);
+                    checkConnectionStatus();
+                    showLoader('Actualizando los datos, por favor aguarde unos minutos')
+                }
+              }).then(
+                app.successUploading.bind(null, {cb: _callback}),
+                app.errorUploading.bind(null, {cb: _callback})
+              );
             } else {
                 console.log("[uploadData] Error al realizar upload");
+                return _callback(new Error("[uploadData] Error al realizar upload"));
             }
         };
-        
+
         request.onerror = function() {
             console.log("[uploadData] Error al realizar upload");
+            return _callback(new Error("[uploadData] Error al realizar upload"));
         };
     };
+
+    /**
+    * Atiende el envío exitoso de datos
+    *
+    * @param object payload
+    * @param object result
+    * @return Callback
+    */
+    app.successUploading = function (payload, result) {
+      if (result) {
+          var data = dataBase.result.transaction(['spotcontrol_details'], 'readwrite');
+          var object = data.objectStore('spotcontrol_details');
+          object.clear();
+          console.log('[syncUpload] AJAX syncUpload exitoso');
+          return payload.cb(null,null);
+      } else {
+          console.log('[syncUpload] AJAX syncUpload failed from WS');
+          return payload.cb(new Error('[syncUpload] AJAX syncUpload failed from WS'));
+      }
+    }
+
+    /**
+    * Atiende los errores de envío de datos
+    *
+    * @param object payload
+    * @param object result
+    * @return Callback
+    */
+    app.errorUploading = function (payload, result) {
+      console.log('[Error] AJAX syncUpload: ' + result.message);
+      return payload.cb(result,null);
+    }
 
     /**
      * Verifica si los objetos ya se encuentran cargados en el almacenamiento local
@@ -719,7 +780,6 @@
         var object = data.objectStore('spotcontrol_details');
         var cursor = object.openCursor();
         var elements = [];
-
         cursor.onsuccess = function(e) {
             var result = e.target.result;
             if (result === null) {
@@ -730,38 +790,44 @@
         };
 
         data.oncomplete = function(e) {
-            if (navigator.onLine) {
-                var msg = '';
-                var msgType = '';
+          isOnline(
+            function() {
+              var msg = '';
+              var msgType = '';
 
-                Promise.all([
-                    app.uploadData(elements),
-                    app.loadDataFromAPI('vehicles'),
-                    app.loadDataFromAPI('persons')
-                ]).then(function() {
-                    var expiration = dataBase.result.transaction(['expiration'], 'readwrite');
-                    var expirationObject = expiration.objectStore('expiration');
-                    
-                    msg = 'Se actualizaron todos los datos';
-                    msgType = 'alert-success';
-
-                    expirationObject.clear();
-                    expirationObject.put({
-                        date: Date.now()
-                    });
-
-                    disabledButtons(false);
-                    hideLoader(msg, msgType);
-                }).catch(function() {
-                    msg = 'Hubo un error en la actualización los datos';
-                    msgType = 'alert-danger';
-
-                    disabledButtons(false);
-                    hideLoader(msg, msgType);
-                });
-            } else {
-                console.log('[syncUpload] offline');
+              async.series([
+                app.uploadData.bind(null, elements),
+                app.loadDataFromAPI.bind(null, 'vehicles'),
+                app.loadDataFromAPI.bind(null, 'persons')
+              ], function(err, result) {
+                if (err) {
+                  console.log(err);
+                  msg = 'Hubo un error en la actualización los datos';
+                  msgType = 'alert-danger';
+                  disabledButtons(false);
+                  hideLoader(msg, msgType);
+                } else {
+                  var expiration = dataBase.result.transaction(['expiration'], 'readwrite');
+                  var expirationObject = expiration.objectStore('expiration');
+                  msg = 'Se actualizaron todos los datos';
+                  msgType = 'alert-success';
+                  expirationObject.clear();
+                  expirationObject.put({
+                      date: Date.now()
+                  });
+                  disabledButtons(false);
+                  hideLoader(msg, msgType);
+                  $('.card-searcher').removeClass('hidden');
+                  $('.login-form').removeClass('hidden');
+                  $('.input-group').removeClass('hidden');
+                  $('.loader').addClass('hidden');
+                }
+              });
+            },
+            function() {
+              console.log('[syncUpload] offline');
             }
+          );
         };
 
         data.onerror = function(e) {
@@ -886,15 +952,18 @@
     });
     // Boton sincronizar datos
     $('#btn_sync_all').on('click', function(e){
-        if (navigator.onLine) {
-            disabledButtons(true);
-            app.checkExpiration(true);
-        } else {
-            $('.alert-message')
-                .html('No hay conexión disponible, la actualización no se ha realizado')
-                .addClass('alert-warning')
-                .removeClass('hidden');
+      isOnline(
+        function() {
+          disabledButtons(true);
+          app.checkExpiration(true);
+        },
+        function() {
+          $('.alert-message')
+              .html('No hay conexión disponible, la actualización no se ha realizado')
+              .addClass('alert-warning')
+              .removeClass('hidden');
         }
+      );
     });
     // Boton cerrar sesión
     $('#btn_logout').on('click', function(e){
@@ -984,7 +1053,7 @@
             .html(msg)
             .addClass('alert-info')
             .removeClass('hidden');
-        setInterval(function() {
+        setTimeout(function() {
             window.location.replace(url);
         }, seconds * 1000);
     }
@@ -1131,13 +1200,13 @@
                 status = 'No identificado';
             }
             $('.img-driver').attr('src', 'assets/images/no-avatar.jpg');
-            $('.title-driver-name').append('<p>Chofer: <span>' + data.driver.fullname + "</span> <span class='" + color + "'>" + status + "</span></p>");
+            $('.driver-detail').append("<td><span class='bold passengersDni'><p><img class='img-circle' src='assets/images/no-avatar.jpg' height='30' width='30'>" + data.driver.fullname + "</p></span></td><td><span class='bold passengersStatus " + color + "'>" + status + "</span></td>");
             if (!data.gps) {
                 color = 'label label-danger';
-                var status = 'Sin Comunicación';
+                var status = 'GPS Sin Comunicación';
             } else {
                 color = 'label label-success';
-                var status = 'Funcionando';
+                var status = 'GPS Funcionando';
             }
             $('.gps').append('<p><span class="' + color + '">' + status + '</span></p>');
             var color = "";
@@ -1150,8 +1219,9 @@
                         color = 'label label-success';
                         status = 'Habilitado';
                     }
-                    $('.passengersName').append("<p><img class='img-circle' src='assets/images/no-avatar.jpg' height='30' width='30'>" + data.passengers[i].fullname + " </p>");
-                    $('.passengersDni').append("<p>" + data.passengers[i].dni + "&nbsp;&nbsp;<span class='" + color + "'>" + status + "</span></p>");
+                    $('#detail-table').append("<tr><td><span class='bold passengersDni'><p><img class='img-circle' src='assets/images/no-avatar.jpg' height='30' width='30'>" + data.passengers[i].fullname + "</br>DNI: " + data.passengers[i].dni + "</p></span></td><td><span class='bold passengersStatus " + color + "'>" + status + "</span></td></tr>");
+                    // $('.passengersName').append("<p><img class='img-circle' src='assets/images/no-avatar.jpg' height='30' width='30'>" + data.passengers[i].fullname + " </p>");
+                    // $('.passengersDni').append("<p>" + data.passengers[i].dni + "&nbsp;&nbsp;<span class='" + color + "'>" + status + "</span></p>");
                 }
             } else {
                 $('.mobile-driver-name').append('<span> Sin Pasajeros</span>');
