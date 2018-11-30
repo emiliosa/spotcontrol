@@ -26,7 +26,7 @@
     { "src": "assets/images/icons/ios/Default-Landscape-667h@2x.png", "sizes": "1334x750", "type": "image/png" },
     { "src": "assets/images/icons/ios/Default@2x+.png", "sizes": "640x1136", "type": "image/png" }
     ],
-  "start_url": "/index.html",
+  "start_url": "/spotcontrol/index.html",
   "display": "standalone",
   "background_color": "#3E4EB8",
   "theme_color": "#2F3BA2"
