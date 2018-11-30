@@ -4,6 +4,6 @@ var SPOTCONTROL = {
     keyPhrase: 'saww33scomdlo7', // Method sha256
     domainPath: '/spotcontrol/',
     API: 'https://app.maxtracker.com/api/v1/spotcontrolws/',
-    domain: 'https://emiliosa.github.io' + '/', // domain + domainPath
+    domain: 'https://emiliosa.github.io' + '/spotcontrol/', // domain + domainPath
 
 };
