@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 var version = '11560001';
-var domainPath = '/';
+var domainPath = '/spotcontrol/';
 var cacheName = 'cacheResources' + version;
 var filesToCache = [
     domainPath,
