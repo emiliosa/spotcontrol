@@ -163,7 +163,7 @@
                     $('#result').html("<div class='alert alert-danger'>Correo electrónico y/o contraseña incorrectos</div>");
                 }
             };
-            
+
             request.onerror = function(e) {
                 console.log('[Error] login offline: ' + request.error.name + '\n\n' + request.error.message);
                 hideLoader('Ha ocurrido un error en el intento de login', 'alert-danger');
@@ -227,17 +227,17 @@
             function() {
                 var msg = '';
                 var msgType = '';
-                
+
                 var data = dataBase.result.transaction(["users"], "readonly");
                 var object = data.objectStore("users");
                 var index = object.index("by_logged");
                 var request = index.get("1");
-                
+
                 request.onsuccess = function(e) {
                     var result = e.target.result;
-                    
+
                     if (typeof result !== "undefined") {
-                        
+
                         $.ajax({
                             url: SPOTCONTROL.API + "upload" + '?jwt=' + result.jwt,
                             //url: SPOTCONTROL.API + "upload",
@@ -250,7 +250,7 @@
                                 //xhr.setRequestHeader('Authorization', 'Bearer ' + result.jwt);
                                 //xhr.setRequestHeader('jwt', result.jwt);
                                 checkConnectionStatus();
-                                showLoader('Guardando los datos, por favor aguarde unos minutos')
+                                showLoader('Guardando los datos, por favor aguarde unos instantes')
                             }
                         }).done(function(response) {
                             if (response) {
@@ -269,20 +269,20 @@
                         }).always(function(jqXHR, textStatus, errorThrown) {
                             hideLoader(msg, msgType);
                         });
-                        
+
                     } else {
                         msg = 'Hubo un error al guardar los datos';
                         msgType = 'alert-danger';
-                        
+
                         console.log("[uploadData] Error al realizar upload");
                         noResult(msg, msgType, false, '');
                     }
                 };
-                
+
                 request.onerror = function() {
                     msg = 'Hubo un error al guardar los datos';
                     msgType = 'alert-danger';
-                    
+
                     console.log("[uploadData] Error al realizar upload");
                     noResult(msg, msgType, false, '');
                 };
@@ -334,12 +334,12 @@
                         var object = data.objectStore("users");
                         var index = object.index("by_logged");
                         var request = index.get("1");
-                        
+
                         request.onsuccess = function(e) {
                             var result = e.target.result;
-                            
+
                             if (typeof result !== "undefined") {
-                                
+
                                 $.ajax({
                                     url: SPOTCONTROL.API + "vehicleByPlateNumber" + '?jwt=' + result.jwt,
                                     //url: SPOTCONTROL.API + "vehicleByPlateNumber",
@@ -352,7 +352,7 @@
                                         //xhr.setRequestHeader('Authorization', 'Bearer ' + result.jwt);
                                         //xhr.setRequestHeader('jwt', result.jwt);
                                         checkConnectionStatus();
-                                        showLoader('Buscando el vehiculo ingresado, por favor aguarde unos minutos')
+                                        showLoader('Buscando el vehiculo ingresado, por favor aguarde unos instantes')
                                     }
                                 }).done(function(response) {
                                     hideLoader('', 'hidden', false);
@@ -374,16 +374,16 @@
                             } else {
                                 var msg = 'Hubo un error al buscar los datos solicitados';
                                 var msgType = 'alert-danger';
-                                
+
                                 console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
                                 noResult(msg, msgType, true, 'vehicle');
                             }
                         };
-                        
+
                         request.onerror = function() {
                             var msg = 'Hubo un error al buscar los datos solicitados';
                             var msgType = 'alert-danger';
-                            
+
                             console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
                             noResult(msg, msgType, true, 'vehicle');
                         };
@@ -419,12 +419,12 @@
                         var object = data.objectStore("users");
                         var index = object.index("by_logged");
                         var request = index.get("1");
-                        
+
                         request.onsuccess = function(e) {
                             var result = e.target.result;
-                            
+
                             if (typeof result !== "undefined") {
-                                
+
                                 $.ajax({
                                     url: SPOTCONTROL.API + "personByDni" + '?jwt=' + result.jwt,
                                     //url: SPOTCONTROL.API + "personByDni",
@@ -437,7 +437,7 @@
                                         //xhr.setRequestHeader('Authorization', 'Bearer ' + result.jwt);
                                         //xhr.setRequestHeader('jwt', result.jwt);
                                         checkConnectionStatus();
-                                        showLoader('Buscando la persona ingresada, por favor aguarde unos minutos')
+                                        showLoader('Buscando la persona ingresada, por favor aguarde unos instantes')
                                     }
                                 }).done(function(response) {
                                     var person = JSON.parse(JSON.stringify(response));
@@ -461,16 +461,16 @@
                             } else {
                                 var msg = 'Hubo un error al buscar los datos solicitados';
                                 var msgType = 'alert-danger';
-                                
+
                                 console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
                                 noResult(msg, msgType, true, 'person');
                             }
                         };
-                        
+
                         request.onerror = function() {
                             var msg = 'Hubo un error al buscar los datos solicitados';
                             var msgType = 'alert-danger';
-                            
+
                             console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
                             noResult(msg, msgType, true, 'person');
                         };
@@ -615,7 +615,6 @@
      * @return Promise
      */
     app.loadDataFromAPI = function(type, cb) {
-        console.log('type:',type);
         var _callback = cb;
         var object = dataBase.result.transaction(["users"], "readonly").objectStore("users");
         var index = object.index("by_logged");
@@ -623,21 +622,17 @@
 
         request.onsuccess = function(e) {
             var result = e.target.result;
-            
+
             if (typeof result !== "undefined") {
-                
+
                 $.ajax({
-                    url: SPOTCONTROL.API + type + '?jwt=' + result.jwt,
-                    //url: SPOTCONTROL.API + type,
+                    url: `${SPOTCONTROL.API}${type}?jwt=${result.jwt}`,
                     type: "GET",
                     dataType: 'json',
-                    //data: type,
                     timeout: 30 * 60 * 1000,
                     beforeSend: function(xhr) {
-                        //xhr.setRequestHeader('Authorization', 'Bearer ' + result.jwt);
-                        //xhr.setRequestHeader('jwt', result.jwt);
-                        checkConnectionStatus();
-                        showLoader('Actualizando los datos, por favor aguarde unos minutos')
+                      checkConnectionStatus();
+                      showLoader('Actualizando los datos, por favor aguarde unos instantes')
                     }
                 }).then(
                     app.successCallback.bind(null, {type: type, cb: _callback}),
@@ -656,7 +651,7 @@
         };
 
     };
-    
+
     /** Atiende la recuperación exitosa de datos
      *
      * @param object payload
@@ -664,17 +659,7 @@
      * @return Callback
      */
      app.successCallback = function (payload, result) {
-         var values = JSON.stringify(result);
-         switch (payload.type) {
-             case 'vehicles':
-                app.vehicles = values;
-                app.saveVehicles();
-                break;
-            case 'persons':
-                app.persons = values;
-                app.savePersons();
-                break;
-        }
+        app.saveEntities(payload.type, result);
         console.log('[firstSyncDownload] (' + payload.type + '): Getting data from WS');
         return payload.cb(null,null);
     }
@@ -699,17 +684,17 @@
      * @return Callback
      */
     app.uploadData = function(elements, cb) {
-        
+
         if (elements.length > 0) {
-            
+
             var _callback = cb;
             var data = dataBase.result.transaction(["users"], "readonly").objectStore("users");
             var index = data.index("by_logged");
             var request = index.get("1");
-            
+
             request.onsuccess = function(e) {
                 var result = e.target.result;
-                
+
                 if (typeof result !== "undefined") {
                     $.ajax({
                         url: SPOTCONTROL.API + "upload" + '?jwt=' + result.jwt,
@@ -723,7 +708,7 @@
                             //xhr.setRequestHeader('Authorization', 'Bearer ' + result.jwt);
                             //xhr.setRequestHeader('jwt', result.jwt);
                             checkConnectionStatus();
-                            showLoader('Actualizando los datos, por favor aguarde unos minutos')
+                            showLoader('Actualizando los datos, por favor aguarde unos instantes')
                         }
                     }).then(
                         app.successUploading.bind(null, {cb: _callback}),
@@ -734,7 +719,7 @@
                     return _callback(new Error("[uploadData] Error al realizar upload"));
                 }
             };
-            
+
             request.onerror = function() {
                 console.log("[uploadData] Error al realizar upload");
                 return _callback(new Error("[uploadData] Error al realizar upload"));
@@ -743,7 +728,7 @@
             return cb(null, null);
         }
     };
-    
+
     /**
      * Atiende el envío exitoso de datos
      *
@@ -849,8 +834,6 @@
             console.log('[Error] spotcontrol_details: ' + data.error.name + ', ' + data.error.message);
             hideLoader(msg, msgType);
         };
-
-
     }
 
     /**
@@ -873,57 +856,19 @@
      * Almacenamiento de los vehiculos localmente
      * @return void
      */
-    app.saveVehicles = function() {
-        var data = dataBase.result.transaction(["vehicles"], "readwrite");
-        var object = data.objectStore("vehicles");
-        var vehicles = JSON.parse(app.vehicles);
+    app.saveEntities = function(type, values) {
+        app[type] = values;
+        let data = dataBase.result.transaction([type], "readwrite");
+        let object = data.objectStore(type);
+        console.log(type,':',values);
 
-        $.each(vehicles, function(key, vehicle) {
-            var request = object.put({
-                id: vehicle.id,
-                plate_number: vehicle.plate_number,
-                name: vehicle.name,
-                brand: vehicle.brand,
-                model: vehicle.model,
-                color: vehicle.color,
-                enable: vehicle.enable,
-                gps: vehicle.gps,
-                docs: vehicle.docs,
-                passengers: vehicle.passengers,
-                driver: vehicle.driver,
-            });
-            request.onerror = function(e) {
-                console.log(request.error.name + '\n\n' + request.error.message);
-            };
-            request.onsuccess = function(e) {}
-        });
-
-        console.log('Saving data into localStorage Vehicles');
-    };
-
-    /**
-     * Almacenamiento de las personas localmente
-     * @return void
-     */
-    app.savePersons = function() {
-        var data = dataBase.result.transaction(["persons"], "readwrite");
-        var object = data.objectStore("persons");
-        var persons = JSON.parse(app.persons);
-
-        $.each(persons, function(key, person) {
-            var request = object.put({
-                id: person.id,
-                dni: person.dni,
-                fullname: person.fullname,
-                enable: person.enable,
-                docs: person.docs,
-            });
-            request.onerror = function(e) {
-                console.log(request.error.name + '\n\n' + request.error.message);
-            };
-        });
-
-        console.log('Saving data into localStorage Persons');
+        for(let iEntity = 0; iEntity < values.length; iEntity += 1) {
+          let request = object.put(values[iEntity]);
+          request.onerror = function(e) {
+            console.log(request.error.name + '\n\n' + request.error.message);
+          };
+        }
+        console.log('Saving data into localStorage', type);
     };
 
     // Boton login
@@ -1113,55 +1058,53 @@
      * @return void
      */
     function getPosition(forceUpdate) {
-        if (navigator.geolocation) {
+      if (navigator.geolocation) {
+        //si actualizo la posición por pedido del usuario
+        if (forceUpdate) {
+            disabledButtons(true);
+            showLoader('Obteniendo ubicación, por favor aguarde unos instantes ...')
+        }
+
+        var options = {
+            enableHighAccuracy: true,
+            timeout: 30 * 1000,
+            maximumAge: 5 * 60 * 1000
+        };
+
+        navigator.geolocation.getCurrentPosition(success, error, options);
+
+        function success(position) {
+            var coordenadas = position.coords;
+
+            console.log('Tu posición actual es: lat=' + coordenadas.latitude + ', lon=' + coordenadas.longitude + ', ' + coordenadas.accuracy + ' metros.');
+
+            $('#hidden_lng').val(coordenadas.latitude);
+            $('#hidden_lat').val(coordenadas.longitude);
 
             //si actualizo la posición por pedido del usuario
             if (forceUpdate) {
-                disabledButtons(true);
-                showLoader('Obteniendo ubicación, por favor aguarde unos minutos ...')
+                disabledButtons(false);
+                hideLoader('Posición actualizada', 'alert-success');
             }
 
-            var options = {
-                enableHighAccuracy: true,
-                timeout: 5 * 1000,
-                maximumAge: 5 * 60 * 1000
-            };
+        };
 
-            navigator.geolocation.getCurrentPosition(success, error, options);
+        function error(error) {
+            console.warn('ERROR(' + error.code + '): ' + error.message);
 
-            function success(position) {
-                var coordenadas = position.coords;
+            $('#hidden_lng').val('');
+            $('#hidden_lat').val('');
+            $('#hidden_position').val('');
 
-                console.log('Tu posición actual es: lat=' + coordenadas.latitude + ', lon=' + coordenadas.longitude + ', ' + coordenadas.accuracy + ' metros.');
-
-                $('#hidden_lng').val(coordenadas.latitude);
-                $('#hidden_lat').val(coordenadas.longitude);
-
-                //si actualizo la posición por pedido del usuario
-                if (forceUpdate) {
-                    disabledButtons(false);
-                    hideLoader('Posición actualizada', 'alert-success');
-                }
-
-            };
-
-            function error(error) {
-                console.warn('ERROR(' + error.code + '): ' + error.message);
-
-                $('#hidden_lng').val('');
-                $('#hidden_lat').val('');
-                $('#hidden_position').val('');
-
-                //si actualizo la posición por pedido del usuario
-                if (forceUpdate) {
-                    disabledButtons(false);
-                    hideLoader('Posición no actualizada', 'alert-warning');
-                }
+            //si actualizo la posición por pedido del usuario
+            if (forceUpdate) {
+                disabledButtons(false);
+                hideLoader('Posición no actualizada', 'alert-warning');
             }
-
-        } else {
-            console.log('[navigator.geolocation] false');
         }
+      } else {
+        console.log('[navigator.geolocation] false');
+      }
     }
 
     /**
@@ -1349,7 +1292,7 @@
         $('.title-driver-name').addClass('hidden');
         $('.title-gps').addClass('hidden');
     }
-    
+
     function isOnline(yes, no){
         var xhr = XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject('Microsoft.XMLHttp');
         xhr.onload = function(){
