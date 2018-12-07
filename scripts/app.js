@@ -148,26 +148,8 @@
                 }).always(function(jqXHR, textStatus, errorThrown) {
                 });
         }, function() {
-            //Logueo Offline
-            var token = CryptoJS.HmacSHA256(username + password, SPOTCONTROL.keyPhrase).toString();
-            var data = dataBase.result.transaction(["users"], "readonly");
-            var object = data.objectStore("users");
-            var index = object.index("by_");
-            var request = index.get(token);
-
-            request.onsuccess = function(e) {
-                var result = request.result;
-                if (typeof result !== "undefined") {
-                    app.userLogin(result);
-                } else {
-                    $('#result').html("<div class='alert alert-danger'>Correo electrónico y/o contraseña incorrectos</div>");
-                }
-            };
-
-            request.onerror = function(e) {
-                console.log('[Error] login offline: ' + request.error.name + '\n\n' + request.error.message);
-                hideLoader('Ha ocurrido un error en el intento de login', 'alert-danger');
-            };
+            // login offline disable
+            $('#result').html("<div class='alert alert-danger'>No hay conexión disponible, el login no es posible</div>");
         });
     };
 
@@ -791,6 +773,9 @@
                 function() {
                     var msg = '';
                     var msgType = '';
+                    
+                    checkConnectionStatus();
+                    showLoader('Actualizando los datos, por favor aguarde unos instantes')
 
                     async.series([
                         app.uploadData.bind(null, elements),
@@ -973,6 +958,7 @@
         $('.alert-message').addClass('hidden');
         $('.card-result').addClass('hidden');
         $('.card-marker').addClass('hidden');
+        $('.card-searcher').removeClass('hidden');
         $('.loader-message').html(msg);
         $('.loader').removeClass('hidden');
     }
