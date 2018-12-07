@@ -136,6 +136,7 @@
                     },
                     beforeSend: function() {
                         checkConnectionStatus();
+                        showLoader('Iniciando sesión, por favor aguarde unos instantes')
                     }
                 }).done(function(response) {
                     if (response) {
@@ -146,6 +147,7 @@
                 }).fail(function(jqXHR, textStatus, errorThrown) {
                     console.log("[Error] login online: " + textStatus);
                 }).always(function(jqXHR, textStatus, errorThrown) {
+                    hideLoader();
                 });
         }, function() {
             // login offline disable
